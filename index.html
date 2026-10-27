@@ -147,7 +147,33 @@
     }
 
     /* ---------- Header ---------- */
-    .header { padding: 0 32px; justify-content: space-between; gap: 24px; }
+    .header { padding: 0 32px; justify-content: space-between; gap: 24px; contain: none; overflow: visible; }  /* lets the settings menu drop below */
+
+    /* Settings dropdown (shares the log dropdown look) */
+    .settings .menu { min-width: 220px; }
+    .settings .sub { margin-top: 4px; }
+    .settings .sub summary {
+      border: 0;
+      padding: 4px 0;
+      font-size: 0.72rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      cursor: pointer;
+      list-style: none;
+    }
+    .settings .sub summary::-webkit-details-marker { display: none; }
+    .settings .sub[open] summary { color: var(--cream); }
+    .settings .submenu {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding: 6px 0 2px 12px;
+      border-left: 2px solid var(--panel-border);
+      margin-left: 4px;
+    }
+    .settings .submenu label { font-size: 0.76rem; }
+    .settings .menu.off .submenu label { opacity: 0.4; }
 
     .brand { display: flex; align-items: center; gap: 22px; height: 100%; flex: 0 0 auto; }
     .brand .mark { height: 64px; width: auto; }
@@ -282,7 +308,7 @@
 
     /* ---------- Main grid ---------- */
     .main { display: grid; grid-template-columns: 1.5fr 1fr 3.4fr; gap: var(--gap); min-height: 0; }
-    .middle { display: grid; grid-template-rows: 1fr 1fr; gap: var(--gap); min-height: 0; }
+    .middle { display: grid; grid-template-rows: 1fr; gap: var(--gap); min-height: 0; }
     .right { display: grid; grid-template-rows: 1.4fr 1.1fr 1.2fr; gap: var(--gap); min-height: 0; }
 
     /* ---------- Timer ---------- */
@@ -330,6 +356,197 @@
     .stat.with-img .numbers .sub { text-align: left; }
     .stat.with-img .value small { font-size: 0.4em; letter-spacing: 0.12em; color: var(--text-dim); margin-left: 0.2em; }
 
+    /* ---------- Events panel (manual: midboss kills, custom timer) ---------- */
+    .events {
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: flex-start;
+      padding: 18px 22px 16px;
+      gap: 10px;
+    }
+
+    .events .panel-title { position: static; }
+
+    .ev-body {
+      display: flex;
+      gap: 10px;
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+
+    .ev-list {
+      flex: 1 1 auto;
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 2px 4px 2px 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      overscroll-behavior: contain;
+      scrollbar-width: none;
+      cursor: grab;
+      user-select: none;
+    }
+
+    .ev-list::-webkit-scrollbar { display: none; }
+    .ev-list.dragging { cursor: grabbing; }
+    .ev-list .evrow { flex: 0 0 auto; }
+
+    /* Tracker row: icon + name on top, value and button on one line, optional sub-row below */
+    .evrow {
+      contain: content;
+      display: grid;
+      grid-template-columns: 52px minmax(0, 1fr) auto;
+      grid-template-areas:
+        "icon text text"
+        "val  val  ctl"
+        "sub  sub  sub";
+      align-items: center;
+      column-gap: 12px;
+      row-gap: 8px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--panel-border);
+      border-left: 3px solid var(--accent);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .evrow .ev-icon { grid-area: icon; }
+    .evrow .ev-text { grid-area: text; }
+    .evrow .ev-subrow { grid-area: sub; min-width: 0; }
+
+    .evrow .ev-icon {
+      flex: 0 0 auto;
+      width: 52px;
+      height: 52px;
+      border-radius: 12px;
+      object-fit: cover;
+      border: 2px solid var(--accent);
+      background: rgba(6, 20, 19, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      color: var(--accent);
+    }
+
+    .evrow .ev-text { flex: 1 1 auto; min-width: 0; }
+
+    .evrow .ev-name {
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--cream);
+      line-height: 1.1;
+    }
+
+    .evrow .ev-sub {
+      font-family: var(--font-ui);
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .evrow .ev-val {
+      grid-area: val;
+      justify-self: start;
+      font-family: var(--font-display);
+      font-size: 1.9rem;
+      line-height: 1;
+      color: var(--cream);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .evrow .ev-val.up { color: var(--accent); }
+
+    /* Sub-row inside a tracker (e.g. Rejuvenator under Midboss) */
+    .ev-subrow {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
+      column-gap: 10px;
+      padding: 6px 10px;
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px dashed rgba(255, 255, 255, 0.14);
+    }
+
+    .ev-subrow.active { border-style: solid; border-color: var(--accent); }
+
+    .ev-subname {
+      font-family: var(--font-ui);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      white-space: nowrap;
+    }
+
+    .ev-subval {
+      text-align: right;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-family: var(--font-display);
+      font-size: 1rem;
+      color: var(--cream);
+      white-space: nowrap;
+    }
+
+    .ev-subrow .pill { flex: 0 0 auto; white-space: nowrap; }
+    .ev-subrow.active .ev-subval { color: var(--accent); font-size: 1.2rem; }
+
+    .pill.small { padding: 5px 10px; font-size: 0.68rem; }
+    .pill:disabled { opacity: 0.35; cursor: default; }
+
+    .evrow .ev-ctl {
+      grid-area: ctl;
+      justify-self: end;
+      min-width: 0;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .evrow input {
+      width: 80px;
+      height: 34px;
+      padding: 0 10px;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: 0.08em;
+      text-align: center;
+      color: var(--cream);
+      background: rgba(6, 20, 19, 0.6);
+      border: 1px solid var(--panel-border);
+      border-radius: 9px;
+      outline: none;
+    }
+
+    .evrow input:focus { border-color: var(--ghost); }
+    .evrow input.bad { border-color: var(--red); }
+    .evrow input::placeholder { color: rgba(169, 199, 184, 0.5); }
+    .evrow .pill { padding: 7px 11px; font-size: 0.7rem; letter-spacing: 0.12em; white-space: nowrap; }
+    .evrow .pill.small { padding: 5px 9px; font-size: 0.66rem; }
+
+    @keyframes blinkRow {
+      0%, 35%, 75%, 100% { background-color: rgba(255, 255, 255, 0.03); }
+      10%, 50% { background-color: rgba(232, 52, 42, 0.85); }
+    }
+
+    .evrow.blink { animation: blinkRow 0.8s steps(1, end) 1; }
+
     /* ---------- Upcoming strip ---------- */
     .upcoming {
       flex-direction: column;
@@ -368,6 +585,10 @@
 
     .scroller .thumb:hover, .scroller.dragging .thumb { opacity: 0.85; }
     .scroller.dragging .thumb { cursor: grabbing; }
+
+    /* Vertical variant (log panel) */
+    .scroller.vertical { width: 12px; height: auto; align-self: stretch; }
+    .scroller.vertical .thumb { width: 100%; height: 100%; will-change: transform, height; }
 
     .upcoming-row {
       display: flex;
@@ -478,23 +699,134 @@
       gap: 12px;
     }
 
-    .log .panel-title { position: static; }
+    .log-head { display: flex; align-items: center; gap: 10px; z-index: 3; }
+    .log .panel-title { position: static; flex: 0 0 auto; text-align: left; }
+
+    /* Icon toggles for the frequent categories */
+    .log-filters { display: flex; gap: 6px; margin-left: 6px; }
+
+    .fbtn {
+      width: 34px;
+      height: 34px;
+      padding: 0;
+      border-radius: 9px;
+      border: 1px solid var(--panel-border);
+      background: rgba(6, 20, 19, 0.7) center / 78% no-repeat;
+      cursor: pointer;
+      opacity: 0.85;
+    }
+
+    .fbtn:hover { opacity: 1; }
+    /* While one category is soloed, the chosen icon lights up and the others dim */
+    .log-filters.solo .fbtn { opacity: 0.3; filter: grayscale(1); }
+    .log-filters.solo .fbtn.on { opacity: 1; filter: none; border-color: var(--ghost); box-shadow: 0 0 10px rgba(106, 231, 154, 0.5); }
+
+    /* Dropdown for the rarer categories */
+    .log-more { position: relative; margin-left: auto; font-family: var(--font-ui); }
+
+    .log-more summary {
+      list-style: none;
+      cursor: pointer;
+      font-size: 0.75rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      border: 1px solid var(--panel-border);
+      border-radius: 999px;
+      padding: 7px 12px;
+      user-select: none;
+    }
+
+    .log-more summary::-webkit-details-marker { display: none; }
+    .log-more[open] summary { color: var(--cream); border-color: var(--cream); }
+    .log-more.on summary { color: var(--ghost); border-color: var(--ghost); }
+
+    .log-more .menu {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 6px);
+      z-index: 5;
+      min-width: 190px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 10px 12px;
+      background: rgba(8, 24, 22, 0.98);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    }
+
+    .log-more label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      letter-spacing: 0.1em;
+      color: var(--cream);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .log-more input { accent-color: var(--ghost); margin: 0; }
+
+    /* Solo filter: data-solo on the list shows only that category. One attribute, no per-line JS. */
+    .log-list[data-solo="wave"]    .line:not([data-cat="wave"]),
+    .log-list[data-solo="creep"]   .line:not([data-cat="creep"]),
+    .log-list[data-solo="box"]     .line:not([data-cat="box"]),
+    .log-list[data-solo="bridge"]  .line:not([data-cat="bridge"]),
+    .log-list[data-solo="urn"]     .line:not([data-cat="urn"]),
+    .log-list[data-solo="rift"]    .line:not([data-cat="rift"]),
+    .log-list[data-solo="midboss"] .line:not([data-cat="midboss"]),
+    .log-list[data-solo="sinner"]  .line:not([data-cat="sinner"]),
+    .log-list[data-solo="timer"]   .line:not([data-cat="timer"]),
+    .log-list[data-solo="melee"]   .line:not([data-cat="melee"]),
+    .log-list[data-solo="speed"]   .line:not([data-cat="speed"]),
+    .log-list[data-solo="match"]   .line:not([data-cat="match"]) { display: none; }
+
+    /* Dropdown items for the solo filter */
+    .solo-menu { gap: 2px; }
+    .mitem {
+      text-align: left;
+      font-family: var(--font-ui);
+      font-size: 0.8rem;
+      letter-spacing: 0.1em;
+      color: var(--cream);
+      background: transparent;
+      border: 0;
+      border-radius: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .mitem:hover { background: rgba(255, 255, 255, 0.06); }
+    .mitem.on { background: rgba(106, 231, 154, 0.18); color: var(--ghost); }
+
+    .log-body {
+      display: flex;
+      gap: 10px;
+      flex: 1 1 auto;
+      min-height: 0;
+    }
 
     .log-list {
       flex: 1 1 auto;
+      min-width: 0;
       min-height: 0;
       overflow-y: auto;
+      overflow-x: hidden;
       overscroll-behavior: contain;
       display: flex;
       flex-direction: column;
       gap: 4px;
-      padding-right: 6px;
-      scrollbar-width: thin;
-      scrollbar-color: rgba(106, 231, 154, 0.35) transparent;
+      padding: 2px 4px 2px 0;
+      scrollbar-width: none;
+      cursor: grab;
+      user-select: none;
     }
 
-    .log-list::-webkit-scrollbar { width: 6px; }
-    .log-list::-webkit-scrollbar-thumb { background: rgba(106, 231, 154, 0.35); border-radius: 999px; }
+    .log-list::-webkit-scrollbar { display: none; }
+    .log-list.dragging { cursor: grabbing; }
 
     .line {
       contain: content;
@@ -595,14 +927,67 @@
       line-height: 1.05;
     }
 
+    /* Second line of the header: subtitle on the left, souls blocks to its right */
+    .notif .title .subrow {
+      display: flex;
+      flex-wrap: wrap;              /* souls drop to their own line when the subtitle is long */
+      align-items: center;
+      gap: 6px 22px;
+      margin-top: 6px;
+      min-width: 0;
+    }
+
     .notif .title small {
       display: block;
+      flex: 0 1 auto;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
       font-family: var(--font-ui);
       font-size: 1rem;
       letter-spacing: 0.22em;
       color: var(--text-dim);
-      margin-top: 6px;
     }
+
+    /* Souls row under the title. Each block: [icon][amount] with the caption below.
+       Blocks sit side by side with a vertical separator between them. */
+    .nsouls {
+      display: flex;
+      align-items: stretch;
+      gap: 18px;
+      flex: 0 0 auto;
+      max-width: 100%;
+    }
+
+    .nsouls .sv { display: flex; flex-direction: column; gap: 2px; }
+    .nsouls .sv .top { display: flex; align-items: center; gap: 10px; }
+    .nsouls .sv img { width: 46px; height: 46px; object-fit: contain; flex: 0 0 auto; }
+
+    .nsouls .sv b {
+      font-family: var(--font-display);
+      font-size: 2.1rem;
+      line-height: 1;
+      color: var(--cream);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .nsouls .sv small {
+      font-family: var(--font-ui);
+      font-size: 0.74rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      white-space: nowrap;
+    }
+
+    .nsouls .sep { width: 2px; align-self: stretch; border-radius: 2px; background: rgba(255, 255, 255, 0.3); }
+
+    .drawer.compact .nsouls { gap: 12px; }
+    .drawer.compact .nsouls .sv img { width: 32px; height: 32px; }
+    .drawer.compact .nsouls .sv b { font-size: 1.5rem; }
+    .drawer.compact .nsouls .sv small { font-size: 0.66rem; }
 
     .notif .body {
       display: flex;
@@ -645,6 +1030,36 @@
     .notif.now { animation: blinkNotif 0.8s steps(1, end) 1; border-color: #ffb3ad; }
     .notif.now .time { color: #fff; }
 
+    /* Compact mode: three cards up at once, so each one tightens up */
+    .drawer.compact { gap: 10px; }
+    .drawer.compact .notif .head { padding: 10px 20px; gap: 16px; }
+    .drawer.compact .notif .icon { width: 88px; height: 88px; border-radius: 18px; font-size: 2rem; }
+    .drawer.compact .notif .title { font-size: 1.9rem; }
+    .drawer.compact .notif .title .subrow { gap: 16px; margin-top: 3px; }
+    .drawer.compact .notif .title small { font-size: 0.8rem; }
+    .drawer.compact .notif .body { padding: 8px 20px 12px; gap: 18px; }
+    .drawer.compact .notif .time { font-size: 3.6rem; }
+    .drawer.compact .notif .info { font-size: 0.95rem; }
+    .drawer.compact .notif .info small { font-size: 0.75rem; margin-top: 2px; }
+
+    /* "+N more" pill shown when cards are waiting their turn */
+    .drawer-more {
+      order: 99;
+      align-self: flex-end;
+      display: none;
+      font-family: var(--font-ui);
+      font-size: 0.9rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--cream);
+      background: rgba(8, 24, 22, 0.95);
+      border: 2px solid var(--text-dim);
+      border-radius: 999px;
+      padding: 8px 18px;
+    }
+
+    .drawer-more.show { display: block; }
+
     /* ---------- Red double-blink ---------- */
     @keyframes blinkPanel {
       0%, 35%, 75%, 100% { background-color: var(--panel-bg); }
@@ -678,7 +1093,7 @@
   <div class="grain"></div>
   <div class="vignette"></div>
   <div class="screen-flash" id="screenFlash"></div>
-  <div class="drawer" id="drawer"></div>
+  <div class="drawer" id="drawer"><div class="drawer-more" id="drawerMore"></div></div>
 
   <div class="page">
     <header class="panel header">
@@ -701,6 +1116,29 @@
       </div>
 
       <div class="controls">
+        <details class="log-more settings" id="settings">
+          <summary>Settings &#9662;</summary>
+          <div class="menu" id="settingsMenu">
+            <label><input type="checkbox" id="flashAll" checked> Red flashes</label>
+            <details class="sub" id="flashAdv">
+              <summary>Advanced &#9662;</summary>
+              <div class="submenu" id="flashCats">
+                <label><input type="checkbox" data-flash="wave"    checked> Trooper waves</label>
+                <label><input type="checkbox" data-flash="box"     checked> Boxes</label>
+                <label><input type="checkbox" data-flash="creep"   checked> Creeps</label>
+                <label><input type="checkbox" data-flash="bridge"  checked> Bridge buffs</label>
+                <label><input type="checkbox" data-flash="urn"     checked> Soul Urn</label>
+                <label><input type="checkbox" data-flash="rift"    checked> Unstable Rift</label>
+                <label><input type="checkbox" data-flash="midboss" checked> Midboss</label>
+                <label><input type="checkbox" data-flash="sinner"  checked> Sinner's Sacrifice</label>
+                <label><input type="checkbox" data-flash="melee"   checked> Melee troopers</label>
+                <label><input type="checkbox" data-flash="speed"   checked> Wave speed</label>
+                <label><input type="checkbox" data-flash="notif"   checked> Notification NOW</label>
+                <label><input type="checkbox" data-flash="screen"  checked> Screen edge</label>
+              </div>
+            </details>
+          </div>
+        </details>
         <button class="pill" id="voiceBtn" type="button" title="Voice callouts">Voice on</button>
         <button class="pill" id="resetBtn" type="button">Reset</button>
         <button class="start-btn" id="startBtn" type="button">Start</button>
@@ -709,13 +1147,97 @@
 
     <main class="main">
       <section class="panel log">
-        <div class="panel-title">Log</div>
-        <div class="log-list" id="log"></div>
+        <div class="log-head">
+          <div class="panel-title">Log</div>
+          <div class="log-filters" id="logFilters">
+            <button class="fbtn" type="button" data-cat="wave"  title="Only trooper waves" style="background-image: url('Assets/img/trooper.png')"></button>
+            <button class="fbtn" type="button" data-cat="creep" title="Only creeps"        style="background-image: url('Assets/img/creeper.png')"></button>
+            <button class="fbtn" type="button" data-cat="box"   title="Only boxes"         style="background-image: url('Assets/img/box.png')"></button>
+          </div>
+          <details class="log-more" id="logMore">
+            <summary id="logMoreLabel">More &#9662;</summary>
+            <div class="menu solo-menu">
+              <button class="mitem" type="button" data-cat="">Show all</button>
+              <button class="mitem" type="button" data-cat="bridge">Bridge buffs</button>
+              <button class="mitem" type="button" data-cat="urn">Soul Urn</button>
+              <button class="mitem" type="button" data-cat="rift">Unstable Rift</button>
+              <button class="mitem" type="button" data-cat="midboss">Midboss</button>
+              <button class="mitem" type="button" data-cat="sinner">Sinner's Sacrifice</button>
+              <button class="mitem" type="button" data-cat="melee">Melee troopers</button>
+              <button class="mitem" type="button" data-cat="speed">Wave speed</button>
+              <button class="mitem" type="button" data-cat="match">Match start</button>
+              <button class="mitem" type="button" data-cat="timer">Stopwatch</button>
+            </div>
+          </details>
+        </div>
+        <div class="log-body">
+          <div class="log-list" id="log"></div>
+          <div class="scroller vertical" id="logScroller"><div class="thumb" id="logThumb"></div></div>
+        </div>
       </section>
 
       <section class="middle">
-        <div class="panel"><div class="panel-title">Objectives</div></div>
-        <div class="panel"><div class="panel-title">Items</div></div>
+        <div class="panel events">
+          <div class="panel-title">Trackers</div>
+          <div class="ev-body">
+          <div class="ev-list" id="evList">
+            <div class="evrow" id="mbRow" data-voice="Midboss is up" data-flash="midboss" style="--accent:#b6ff5c">
+              <img class="ev-icon" src="Assets/img/midboss.png" alt="" style="object-position: 62% 32%">
+              <div class="ev-text">
+                <div class="ev-name">Midboss</div>
+                <div class="ev-sub" id="mbSub">alive since start</div>
+              </div>
+              <div class="ev-val up" id="mbVal">UP</div>
+              <div class="ev-ctl"><button class="pill" id="mbBtn" type="button">Done</button></div>
+              <div class="ev-subrow" id="rjRow">
+                <span class="ev-subname">Rejuvenator</span>
+                <span class="ev-subval" id="rjVal">drops on kill</span>
+                <button class="pill small" id="rjBtn" type="button" disabled>Picked up</button>
+              </div>
+            </div>
+            <div class="evrow" id="rfRow" style="--accent:#c79bff">
+              <div class="ev-icon">R</div>
+              <div class="ev-text">
+                <div class="ev-name">Unstable Rift</div>
+                <div class="ev-sub" id="rfSub">estimate ±1 min</div>
+              </div>
+              <div class="ev-val" id="rfVal">--</div>
+              <div class="ev-ctl"><button class="pill" id="rfBtn" type="button">Spawned</button></div>
+            </div>
+            <div class="evrow" id="urRow" style="--accent:#e8cc96">
+              <div class="ev-icon">U</div>
+              <div class="ev-text">
+                <div class="ev-name">Soul Urn</div>
+                <div class="ev-sub" id="urSub">first spawn at 10:00</div>
+              </div>
+              <div class="ev-val" id="urVal">--</div>
+              <div class="ev-ctl"><button class="pill" id="urBtn" type="button" disabled>Picked up</button></div>
+            </div>
+            <div class="evrow" id="snRow" data-voice="Sinners are up" data-flash="sinner" style="--accent:#ff9f6e">
+              <img class="ev-icon" src="Assets/img/sinnner.png" alt="">
+              <div class="ev-text">
+                <div class="ev-name">Sinner's Sacrifice</div>
+                <div class="ev-sub" id="snSub">first spawn at 08:00</div>
+              </div>
+              <div class="ev-val" id="snVal">--</div>
+              <div class="ev-ctl"><button class="pill" id="snBtn" type="button" disabled>Done</button></div>
+            </div>
+            <div class="evrow" id="tmRow" style="--accent:#c4cdc9">
+              <div class="ev-icon">S</div>
+              <div class="ev-text">
+                <div class="ev-name">Stopwatch</div>
+                <div class="ev-sub" id="tmSub">runs on match time</div>
+              </div>
+              <div class="ev-val" id="tmVal">00:00</div>
+              <div class="ev-ctl">
+                <button class="pill" id="tmClr" type="button">Clear</button>
+                <button class="pill" id="tmBtn" type="button">Start</button>
+              </div>
+            </div>
+          </div>
+          <div class="scroller vertical" id="evScroller"><div class="thumb" id="evThumb"></div></div>
+          </div>
+        </div>
       </section>
 
       <section class="right">
@@ -725,7 +1247,7 @@
         </div>
 
         <div class="stats">
-          <div class="panel stat with-img theme-beige" id="boxPanel" data-voice="Boxes">
+          <div class="panel stat with-img theme-beige" id="boxPanel" data-voice="Boxes" data-flash="box">
             <div class="panel-title">Boxes</div>
             <img class="stat-img" src="Assets/img/box.png" alt="">
             <div class="numbers">
@@ -735,7 +1257,7 @@
             </div>
           </div>
 
-          <div class="panel stat with-img" id="creepPanel" data-voice="Creeps">
+          <div class="panel stat with-img" id="creepPanel" data-voice="Creeps" data-flash="creep">
             <div class="panel-title">Creeps</div>
             <img class="stat-img" src="Assets/img/creeper.png" alt="">
             <div class="numbers">
@@ -745,7 +1267,7 @@
             </div>
           </div>
 
-          <div class="panel stat with-img theme-blue" id="wavePanel" data-voice="Wave">
+          <div class="panel stat with-img theme-blue" id="wavePanel" data-voice="Wave" data-flash="wave">
             <div class="panel-title">Trooper waves</div>
             <img class="stat-img" src="Assets/img/trooper.png" alt="">
             <div class="numbers">
@@ -792,6 +1314,21 @@
     ];
     const BOX_FOOT = 'respawn 3:00 after break · tunnels 5:00 · +4s kill';
 
+    // Soul bounties (deadlock.wiki/Souls), m = match minutes. Values are floored like the game does.
+    const SOULS = {
+      trooper: m => 100 + 2 * m,
+      small:   m => 41 + 0.44 * m,
+      medium:  m => 68 + 0.73 * m,
+      large:   m => 181 + 1.95 * m,
+      box:     m => 23 + 2 * m,
+      tough:   m => 46 + 4 * m,
+      urn:     m => 250 + 70 * m,
+      midboss: m => 3000 + 50 * m,
+      sinner:  m => 310 + 3.35 * m
+    };
+    const souls = (key, t) => Math.floor(SOULS[key](t / 60));
+    const HAUNTS_PER_SMALL_CAMP = 3;
+
     const CREEP_CYCLES = [
       { label: 'Small camps',  first: 2 * 60, every: 85 + KILL_TIME },
       { label: 'Medium camps', first: 5 * 60, every: 290 + KILL_TIME },
@@ -802,12 +1339,17 @@
     // Upcoming events: first spawn and repeat interval (every: null = one-off).
     const EVENTS = [
       { id: 'bridge',  name: 'Bridge buffs',    glyph: 'B', first: 5 * 60,  every: 5 * 60, note: 'all buffs from 10:00',             color: '#8ec2ff', voice: 'Bridge buffs', img: 'Assets/img/buff.png' },
-      { id: 'urn',     name: 'Soul Urn',        glyph: 'U', first: 10 * 60, every: 5 * 60, note: 'held while carried',               color: '#e8cc96', voice: 'Urn' },
-      { id: 'rift',    name: 'Unstable Rift',   glyph: 'R', first: 11 * 60, every: 7 * 60, note: 'give or take a minute',            color: '#c79bff', voice: 'Rift' },
+      { id: 'urn',     name: 'Soul Urn',        glyph: 'U', first: 10 * 60, every: 5 * 60, note: 'held while carried',               color: '#e8cc96', voice: 'Urn',
+        upLabel: 'HELD', dynamic: t => urnNext(t) },
+      { id: 'rift',    name: 'Unstable Rift',   glyph: 'R', first: 11 * 60, every: 7 * 60, note: 'give or take a minute',            color: '#c79bff', voice: 'Rift',
+        dynamic: t => riftNext(t), count: t => riftCount(t) },
       { id: 'melee',   name: 'Melee troopers',  glyph: 'M', first: 5 * 60,  every: null,   note: 'join every wave',                  color: '#8ec2ff', voice: 'Melee troopers' },
       { id: 'waves25', name: 'Waves every 25s', glyph: 'W', first: 20 * 60, every: null,   note: 'down from 30s',                    color: '#8ec2ff', voice: 'Faster waves' },
       { id: 'waves20', name: 'Waves every 20s', glyph: 'W', first: 35 * 60, every: null,   note: 'down from 25s',                    color: '#8ec2ff', voice: 'Faster waves' },
-      { id: 'midboss', name: 'Midboss',         glyph: '',  first: 0,       every: null,   note: 'respawn 7 / 6 / 5 min after kill', color: '#b6ff5c', voice: 'Midboss', img: 'Assets/img/midboss.png', imgPos: '62% 32%', upLabel: 'UP' }
+      { id: 'midboss', name: 'Midboss',         glyph: '',  first: 0,       every: null,   note: 'respawn 7 / 6 / 5 min after kill', color: '#b6ff5c', voice: 'Midboss', img: 'Assets/img/midboss.png', imgPos: '62% 32%', upLabel: 'UP',
+        dynamic: () => midboss.respawnAt },   // set from the Trackers panel when the boss is killed
+      { id: 'sinner',  name: "Sinner's Sacrifice", glyph: 'S', first: 8 * 60, every: null, note: 'respawn 5:00 after broken', color: '#ff9f6e', voice: 'Sinners', img: 'Assets/img/sinnner.png', upLabel: 'UP',
+        dynamic: t => sinnerEndAt(t) }       // first spawn from the schedule, respawns from the Trackers panel
     ];
 
     // Jog bar: match seconds per real second at full deflection, cubic curve.
@@ -864,7 +1406,16 @@
       boxPanel: $('boxPanel'), boxValue: $('boxValue'), boxSub: $('boxSub'), boxFoot: $('boxFoot'),
       creepPanel: $('creepPanel'), creepValue: $('creepValue'), creepSub: $('creepSub'), creepFoot: $('creepFoot'),
       wavePanel: $('wavePanel'), waveNext: $('waveNext'), waveInfo: $('waveInfo'), waveFoot: $('waveFoot'),
-      upcoming: $('upcoming'), scroller: $('scroller'), thumb: $('scrollThumb'), drawer: $('drawer'), log: $('log')
+      upcoming: $('upcoming'), scroller: $('scroller'), thumb: $('scrollThumb'), drawer: $('drawer'), drawerMore: $('drawerMore'),
+      log: $('log'), logScroller: $('logScroller'), logThumb: $('logThumb'), logFilters: $('logFilters'), logMore: $('logMore'), logMoreLabel: $('logMoreLabel'),
+      settings: $('settings'), settingsMenu: $('settingsMenu'), flashAll: $('flashAll'), flashCats: $('flashCats'),
+      mbRow: $('mbRow'), mbSub: $('mbSub'), mbVal: $('mbVal'), mbBtn: $('mbBtn'),
+      tmRow: $('tmRow'), tmSub: $('tmSub'), tmVal: $('tmVal'), tmBtn: $('tmBtn'), tmClr: $('tmClr'),
+      snRow: $('snRow'), snSub: $('snSub'), snVal: $('snVal'), snBtn: $('snBtn'),
+      rjRow: $('rjRow'), rjVal: $('rjVal'), rjBtn: $('rjBtn'),
+      rfRow: $('rfRow'), rfSub: $('rfSub'), rfVal: $('rfVal'), rfBtn: $('rfBtn'),
+      urRow: $('urRow'), urSub: $('urSub'), urVal: $('urVal'), urBtn: $('urBtn'),
+      evList: $('evList'), evScroller: $('evScroller'), evThumb: $('evThumb')
     };
 
     // Cheap text setter: skips the DOM write when nothing changed.
@@ -918,17 +1469,51 @@
     /* =====================================================================
        BLINK  (panel + screen flash, voice callout)
        ===================================================================== */
+    /* ---- Flash settings: master switch plus per-source toggles, saved in localStorage ---- */
+    const flash = { all: true, cats: {} };            // cats[cat] === false means disabled
+    const flashAllowed = cat => flash.all && flash.cats[cat] !== false;
+
+    function saveFlash() {
+      try { localStorage.setItem('dl-flash', JSON.stringify(flash)); } catch (e) { /* storage blocked: ignore */ }
+    }
+
+    function loadFlash() {
+      try {
+        const saved = JSON.parse(localStorage.getItem('dl-flash'));
+        if (saved && typeof saved.all === 'boolean') { flash.all = saved.all; flash.cats = saved.cats || {}; }
+      } catch (e) { /* ignore bad data */ }
+      el.flashAll.checked = flash.all;
+      el.settingsMenu.classList.toggle('off', !flash.all);
+      el.flashCats.querySelectorAll('input').forEach(cb => { cb.checked = flash.cats[cb.dataset.flash] !== false; });
+    }
+
+    el.flashAll.addEventListener('change', () => {
+      flash.all = el.flashAll.checked;
+      el.settingsMenu.classList.toggle('off', !flash.all);
+      saveFlash();
+    });
+
+    el.flashCats.addEventListener('change', e => {
+      const cb = e.target;
+      if (cb.type !== 'checkbox') return;
+      if (cb.checked) delete flash.cats[cb.dataset.flash]; else flash.cats[cb.dataset.flash] = false;
+      saveFlash();
+    });
+
+    loadFlash();
+
     function blink(node) {
-      speak(node.dataset.voice);
+      speak(node.dataset.voice);                     // voice is independent of the flash settings
+      if (!flashAllowed(node.dataset.flash)) return;
       node.classList.remove('blink');
-      el.screenFlash.classList.remove('blink');
       void node.offsetWidth;                         // restart the CSS animation
       node.classList.add('blink');
-      el.screenFlash.classList.add('blink');
+      const screen = flashAllowed('screen');
+      if (screen) { el.screenFlash.classList.remove('blink'); void el.screenFlash.offsetWidth; el.screenFlash.classList.add('blink'); }
       clearTimeout(node.__blinkTimer);
       node.__blinkTimer = setTimeout(() => {
         node.classList.remove('blink');
-        el.screenFlash.classList.remove('blink');
+        if (screen) el.screenFlash.classList.remove('blink');
       }, 900);
     }
 
@@ -964,7 +1549,7 @@
         const c = cycles[i];
         total += occurrences(c, t);
         const n = nextTime(c, t);
-        if (n !== null && n < next) { next = n; label = c.label; }
+        if (n !== null && n < next) { next = n; label = c.label || c.name; }
       }
       soonestBuf.next = next; soonestBuf.label = label; soonestBuf.total = total;
       return soonestBuf;
@@ -994,23 +1579,42 @@
     EVENTS.forEach(ev => { evById[ev.id] = ev; });
 
     const NOTIFY = [
-      { id: 'wave',   title: 'Trooper wave',     sub: 'lane push',             lead: 10, color: '#8ec2ff', img: 'Assets/img/trooper.png', wave: true,
+      { id: 'wave',   title: 'Trooper wave',     sub: 'lane push',             lead: 10, color: '#8ec2ff', img: 'Assets/img/trooper.png', wave: true, soulsLabels: ['each', 'full wave'],
         detail: '4 per lane · 3 ranged + 1 medic, melee from 5:00' },
       { id: 'boxes',  title: 'Boxes',            sub: 'crates respawn',        lead: 5 , color: '#e8cc96', img: 'Assets/img/box.png', cycles: BOX_CYCLES,
-        detail: 'respawn 3:00 after break · tunnels 5:00' },
+        detail: 'respawn 3:00 after break · tunnels 5:00',
+        soulsLabels: ['box · 60%', 'tough box'], souls: t => ({ per: souls('box', t), total: souls('tough', t) }) },
       { id: 'small',  title: 'Small camps',      sub: 'tier 1 creeps',         lead: 5 , color: '#6ae79a', img: 'Assets/img/creeper.png', cycles: [CREEP_CYCLES[0]],
-        detail: '3 haunts · respawn 1:25 after clear' },
+        detail: '3 haunts · respawn 1:25 after clear',
+        soulsLabels: ['each', 'full camp'], souls: t => ({ per: souls('small', t), total: souls('small', t) * HAUNTS_PER_SMALL_CAMP }) },
       { id: 'medium', title: 'Sinners & tier 2', sub: 'medium camps',          lead: 5 , color: '#6ae79a', img: 'Assets/img/creeper.png', cycles: [CREEP_CYCLES[1]],
-        detail: 'clear the sinner machine too · respawn 4:50' },
+        detail: 'clear the sinner machine too · respawn 4:50',
+        soulsLabels: ['each', 'full camp'], souls: t => ({ per: souls('medium', t), total: null }) },
       { id: 'large',  title: 'Large camps',      sub: 'tier 3 creeps',         lead: 5 , color: '#6ae79a', img: 'Assets/img/creeper.png', cycles: [CREEP_CYCLES[2]],
-        detail: 'up to tier 3 · respawn 5:35 after clear' },
+        detail: 'up to tier 3 · respawn 5:35 after clear',
+        soulsLabels: ['each', 'full camp'], souls: t => ({ per: souls('large', t), total: null }) },
       { id: 'bridge', title: 'Bridge buffs',     sub: 'heavy melee to claim',  lead: 25, color: '#8ec2ff', img: 'Assets/img/buff.png', cycles: [evById.bridge],
         detail: 'casting · gun · movement · survival' },
-      { id: 'urn',    title: 'Soul Urn',         sub: 'deliver for souls',     lead: 45, color: '#e8cc96', glyph: 'U', cycles: [evById.urn],
-        detail: 'every 5 min · next spawn waits while carried' },
-      { id: 'rift',   title: 'Unstable Rift',    sub: 'give or take a minute', lead: 5 , color: '#c79bff', glyph: 'R', cycles: [evById.rift],
-        detail: 'side lane bridge · rift troopers for the winner' }
+      { id: 'urn',    title: 'Soul Urn',         sub: 'deliver for souls',     lead: 45, color: '#e8cc96', glyph: 'U', custom: 'urn',
+        detail: 'every 5 min · next spawn waits while carried', soulsLabels: ['delivered'] },
+      { id: 'rift',   title: 'Unstable Rift',    sub: 'give or take a minute', lead: 5 , color: '#c79bff', glyph: 'R', custom: 'rift',
+        detail: 'side lane bridge · press Spawned in Trackers to re-time it' },
+      // Manual sources: driven by the Trackers panel, not the schedule.
+      { id: 'midboss', title: 'Midboss',         sub: 'back in the pit',       custom: 'midboss', color: '#b6ff5c', img: 'Assets/img/midboss.png', imgPos: '62% 32%',
+        detail: 'warnings at 5:00 · 2:30 · 1:00 · 0:30, then the last 10s', soulsLabels: ['bounty'] },
+      { id: 'sinner',  title: 'Sinners',         sub: "sinner's sacrifice",    custom: 'sinner', lead: 10, color: '#ff9f6e', img: 'Assets/img/sinnner.png',
+        detail: 'half from melee hits, half on the break · 15 machines', soulsLabels: ['bounty'] },
+      { id: 'rejuv',   title: 'Rejuvenator',     sub: 'team buff · 3 min',     custom: 'rejuv', color: '#b6ff5c', glyph: 'RJ',
+        detail: 'each heavy melee hit adds a credit, max 3 · one per hero · first hit heals to full' }
     ];
+
+    // Rejuvenator card: shown for the first 8s after pickup, again for 5s at the 30s warning, then the last 10s.
+    const REJUV_INTRO = 8;
+
+    // Midboss warning windows: 5 seconds on screen at each mark, then a live countdown for the last 10s.
+    const MIDBOSS_MARKS = [300, 150, 60, 30];
+    const MIDBOSS_MARK_HOLD = 5;
+    const MIDBOSS_FINAL = 10;
 
     const NOTIF_HOLD_MS = 4800;   // red blink (0.8s) + 4s hold before sliding out
     const NOTIF_OUT_MS = 400;     // matches the CSS slide transition
@@ -1025,14 +1629,54 @@
       head.className = 'head';
       const icon = document.createElement('div');
       icon.className = src.img ? 'icon img' : 'icon';
-      if (src.img) icon.style.backgroundImage = 'url("' + src.img + '")';
+      if (src.img) {
+        icon.style.backgroundImage = 'url("' + src.img + '")';
+        if (src.imgPos) icon.style.backgroundPosition = src.imgPos;
+      }
       else icon.textContent = src.glyph;
       const title = document.createElement('div');
       title.className = 'title';
       title.textContent = src.title;
       const small = document.createElement('small');
       small.textContent = src.sub;
-      title.appendChild(small);
+      const subrow = document.createElement('div');
+      subrow.className = 'subrow';
+      subrow.appendChild(small);
+      title.appendChild(subrow);
+
+      // Souls row: [icon amount / caption] | [icon amount / caption], when the source has a bounty.
+      let sPer = null, sTot = null;
+      if (src.soulsLabels) {
+        const soulBlock = label => {
+          const box = document.createElement('div');
+          box.className = 'sv';
+          const top = document.createElement('div');
+          top.className = 'top';
+          const img = document.createElement('img');
+          img.src = 'Assets/img/soul.png';
+          img.alt = '';
+          const amount = document.createElement('b');
+          top.append(img, amount);
+          const caption = document.createElement('small');
+          caption.textContent = label;
+          box.append(top, caption);
+          return { box, amount };
+        };
+        const row = document.createElement('div');
+        row.className = 'nsouls';
+        const per = soulBlock(src.soulsLabels[0]);
+        sPer = per.amount;
+        row.appendChild(per.box);
+        if (src.soulsLabels[1]) {
+          const sep = document.createElement('div');
+          sep.className = 'sep';
+          const tot = soulBlock(src.soulsLabels[1]);
+          sTot = tot.amount;
+          row.append(sep, tot.box);
+        }
+        subrow.appendChild(row);
+      }
+
       head.append(title, icon);   // icon sits on the right edge for a quick read
 
       const body = document.createElement('div');
@@ -1048,34 +1692,69 @@
       body.append(time, info);
 
       node.append(head, body);
-      notifs[src.id] = { src, node, time, info: infoMain, state: 0, timer: 0 };   // state: 0 hidden, 1 in, 2 now
+      notifs[src.id] = { src, node, time, info: infoMain, sPer, sTot, state: 0, timer: 0 };   // state: 0 hidden, 1 in, 2 now
     });
+
+    // At most NOTIF_MAX_VISIBLE cards on screen; the rest wait in `pending` and
+    // slide in as space frees up. States: 0 hidden, 1 in, 2 now, 3 queued.
+    const NOTIF_MAX_VISIBLE = 3;
+    const NOTIF_FULL_CARD_PX = 312;   // approximate height of a full-size card, for the overflow check
+    const pending = [];
+    let visibleCount = 0;
+
+    function updateDrawerMeta() {
+      // Compact when the cap is hit, or earlier if full-size cards would run off the bottom of the screen.
+      const fullHeight = visibleCount * NOTIF_FULL_CARD_PX + (visibleCount - 1) * 16;
+      el.drawer.classList.toggle('compact', visibleCount >= NOTIF_MAX_VISIBLE || fullHeight > window.innerHeight - 170);
+      setText(el.drawerMore, '+' + pending.length + ' more');
+      el.drawerMore.classList.toggle('show', pending.length > 0);
+    }
+
+    function notifMount(n) {
+      visibleCount++;
+      el.drawer.insertBefore(n.node, el.drawerMore);
+      void n.node.offsetWidth;            // commit the off-screen position before sliding in
+      n.node.classList.add('in');
+      n.state = 1;
+    }
 
     function notifShow(n) {
       clearTimeout(n.timer);
       n.node.classList.remove('now');
       if (n.state === 0) {
-        el.drawer.appendChild(n.node);
-        void n.node.offsetWidth;            // commit the off-screen position before sliding in
-        n.node.classList.add('in');
+        if (visibleCount < NOTIF_MAX_VISIBLE) notifMount(n);
+        else { n.state = 3; pending.push(n); }
+        updateDrawerMeta();
+      } else if (n.state === 2) {
+        n.state = 1;
       }
-      n.state = 1;
     }
 
     function notifHide(n) {
       clearTimeout(n.timer);
       if (n.state === 0) return;
+      if (n.state === 3) {
+        pending.splice(pending.indexOf(n), 1);
+        n.state = 0;
+        updateDrawerMeta();
+        return;
+      }
       n.state = 0;
+      visibleCount--;
       n.node.classList.remove('in', 'now');
       n.timer = setTimeout(() => { if (n.state === 0 && n.node.parentNode) n.node.remove(); }, NOTIF_OUT_MS);
+      while (pending.length && visibleCount < NOTIF_MAX_VISIBLE) notifMount(pending.shift());
+      updateDrawerMeta();
     }
 
     function notifFire(n) {
       n.state = 2;
       setText(n.time, 'NOW');
       n.node.classList.remove('now');
-      void n.node.offsetWidth;
-      n.node.classList.add('now');
+      if (flashAllowed('notif')) {
+        void n.node.offsetWidth;
+        n.node.classList.add('now');
+      }
       clearTimeout(n.timer);
       n.timer = setTimeout(() => notifHide(n), NOTIF_HOLD_MS);
     }
@@ -1083,14 +1762,62 @@
     function renderNotifications(t, allowEvents, wave) {
       for (let i = 0; i < NOTIFY.length; i++) {
         const src = NOTIFY[i], n = notifs[src.id];
-        let next, info;
+        let next, info, per = null, total = null;
+
+        if (src.custom) {
+          const endAt = src.custom === 'midboss' ? midboss.respawnAt
+                      : src.custom === 'sinner'  ? sinnerEndAt(t)
+                      : src.custom === 'urn'     ? urnNext(t)
+                      : src.custom === 'rejuv'   ? rejuv.endAt
+                      : riftNext(t);
+          if (endAt === null) { if (n.state === 1 || n.state === 3) notifHide(n); continue; }
+          const rem = endAt - t;
+          let show = rem > 0;
+          if (show) {
+            if (src.custom === 'midboss') {
+              show = rem <= MIDBOSS_FINAL;
+              for (let m = 0; m < MIDBOSS_MARKS.length && !show; m++) show = rem <= MIDBOSS_MARKS[m] && rem > MIDBOSS_MARKS[m] - MIDBOSS_MARK_HOLD;
+            } else if (src.custom === 'rejuv') {
+              show = rem > REJUV_DURATION - REJUV_INTRO || (rem <= 30 && rem > 25) || rem <= 10;
+            } else {
+              show = rem <= src.lead;
+            }
+          }
+          if (show) {
+            notifShow(n);
+            setText(n.time, rem > 60 ? mmss(rem) : rem + 's');
+            if (src.custom === 'midboss') {
+              setText(n.info, 'Back at ' + mmss(endAt) + ' · kill ' + midboss.deaths);
+              if (n.sPer) setText(n.sPer, souls('midboss', endAt));
+            } else if (src.custom === 'sinner') {
+              setText(n.info, (sinner.respawnAt === null ? 'First spawn at ' : 'Back at ') + mmss(endAt));
+              if (n.sPer) setText(n.sPer, souls('sinner', endAt));
+            } else if (src.custom === 'urn') {
+              setText(n.info, 'Urn at ' + mmss(endAt) + (urn.out ? ' · one still out' : ''));
+              if (n.sPer) setText(n.sPer, souls('urn', endAt));
+            } else if (src.custom === 'rejuv') {
+              setText(n.info, rem <= 30 ? 'Buff ending at ' + mmss(endAt) + ' · spend credits now'
+                                        : 'Buff until ' + mmss(endAt) + ' · revive at full HP after 3s');
+            } else {
+              setText(n.info, (rift.seen.length ? 'Expected ' : 'Estimate ') + mmss(endAt) + ' · give or take a minute');
+            }
+          } else if (n.state === 1 || n.state === 3) {
+            // Either a 5s warning window closed (hide) or the countdown hit zero (fire).
+            if (rem <= 0 && allowEvents && n.state === 1) notifFire(n); else notifHide(n);
+          }
+          continue;
+        }
+
         if (src.wave) {
           next = wave.next;
           info = 'Wave ' + (wave.count + 1) + ' at ' + mmss(next) + ' · every ' + wave.interval + 's';
+          per = souls('trooper', next);
+          total = per * TROOPERS_PER_LANE;
         } else {
           const s = soonestCycle(src.cycles, t);
           next = s.next;
           info = s.label + ' at ' + mmss(s.next);
+          if (src.souls) { const sv = src.souls(s.next); per = sv.per; total = sv.total; }
         }
         const remaining = next - t;
 
@@ -1098,9 +1825,14 @@
           notifShow(n);
           setText(n.time, remaining + 's');
           setText(n.info, info);
+          if (n.sPer) setText(n.sPer, per);
+          if (n.sTot) setText(n.sTot, total === null ? 'varies' : total);
         } else if (n.state === 1) {
           // Countdown just passed zero: the event fired this second.
           if (allowEvents) notifFire(n); else notifHide(n);
+        } else if (n.state === 3) {
+          // Fired while still waiting in the queue: drop it, the panels and log already show it.
+          notifHide(n);
         }
       }
     }
@@ -1117,6 +1849,7 @@
       const card = document.createElement('div');
       card.className = 'event';
       card.dataset.voice = ev.voice;
+      card.dataset.flash = (ev.id === 'waves25' || ev.id === 'waves20') ? 'speed' : ev.id;
       card.style.setProperty('--accent', ev.color);
       card.style.setProperty('--glow', ev.color + '66');
 
@@ -1153,8 +1886,8 @@
     function renderUpcoming(t, allowEvents, prevCounts, counts) {
       for (let i = 0; i < EVENTS.length; i++) {
         const ev = EVENTS[i], ui = cards[ev.id];
-        const next = nextTime(ev, t);
-        counts[ev.id] = occurrences(ev, t);
+        const next = ev.dynamic ? ev.dynamic(t) : nextTime(ev, t);
+        counts[ev.id] = ev.count ? ev.count(t) : occurrences(ev, t);
 
         let text, soon = false, up = false;
         if (next === null) { text = ev.upLabel || 'done'; up = true; }
@@ -1167,10 +1900,7 @@
 
         orderBuf[i].id = ev.id;
         orderBuf[i].key = next === null ? Infinity : next;
-        if (allowEvents && counts[ev.id] > (prevCounts[ev.id] || 0)) {
-          blink(ui.card);
-          logEvent(t, ev.name + (ev.every && counts[ev.id] > 1 ? ' respawned' : ''), ev.color);
-        }
+        if (allowEvents && counts[ev.id] > (prevCounts[ev.id] || 0)) blink(ui.card);
       }
 
       // Soonest first; only touch the DOM when the order actually changes.
@@ -1180,135 +1910,584 @@
       if (sig !== cardOrder) {
         cardOrder = sig;
         for (let i = 0; i < orderBuf.length; i++) el.upcoming.appendChild(cards[orderBuf[i].id].card);
-        requestThumbSync();
+        upcomingScroller.request();
       }
     }
 
-    /* ---- Scroller: drag the row, drag the thumb, click the track, wheel ---- */
-    let thumbSyncQueued = false;
+    /* =====================================================================
+       SCROLLER  — custom track + thumb for a scroll container, either axis.
+       Drag the content, drag the thumb, click the track. Horizontal rows
+       also take the mouse wheel. Returns { sync, request }.
+       ===================================================================== */
+    function attachScroller(row, track, thumb, vertical) {
+      const scrollProp = vertical ? 'scrollTop' : 'scrollLeft';
+      const sizeProp = vertical ? 'scrollHeight' : 'scrollWidth';
+      const clientProp = vertical ? 'clientHeight' : 'clientWidth';
+      const offsetProp = vertical ? 'offsetHeight' : 'offsetWidth';
+      const dimStyle = vertical ? 'height' : 'width';
+      const axis = vertical ? 'clientY' : 'clientX';
+      const tx = v => (vertical ? 'translateY(' : 'translateX(') + v + 'px)';
+      let queued = false;
 
-    function syncThumb() {
-      thumbSyncQueued = false;
-      const row = el.upcoming;
-      const trackW = el.scroller.clientWidth;
-      const maxScroll = row.scrollWidth - row.clientWidth;
-      if (maxScroll <= 0) {
-        el.thumb.style.width = '100%';
-        el.thumb.style.transform = 'translateX(0)';
-        return;
+      function sync() {
+        queued = false;
+        const trackLen = track[clientProp];
+        const maxScroll = row[sizeProp] - row[clientProp];
+        if (maxScroll <= 0) {
+          thumb.style[dimStyle] = '100%';
+          thumb.style.transform = tx(0);
+          return;
+        }
+        const len = Math.max(40, trackLen * row[clientProp] / row[sizeProp]);
+        const pos = (row[scrollProp] / maxScroll) * (trackLen - len);
+        thumb.style[dimStyle] = len + 'px';
+        thumb.style.transform = tx(pos);
       }
-      const w = Math.max(40, trackW * row.clientWidth / row.scrollWidth);
-      const x = (row.scrollLeft / maxScroll) * (trackW - w);
-      el.thumb.style.width = w + 'px';
-      el.thumb.style.transform = 'translateX(' + x + 'px)';
-    }
 
-    function requestThumbSync() {
-      if (!thumbSyncQueued) { thumbSyncQueued = true; requestAnimationFrame(syncThumb); }
-    }
+      function request() {
+        if (!queued) { queued = true; requestAnimationFrame(sync); }
+      }
 
-    el.upcoming.addEventListener('scroll', requestThumbSync, { passive: true });
-    new ResizeObserver(requestThumbSync).observe(el.upcoming);
+      row.addEventListener('scroll', request, { passive: true });
+      new ResizeObserver(request).observe(row);
 
-    // Drag the row itself with the left mouse button.
-    (function () {
-      let startX = 0, startScroll = 0, dragging = false;
-      const row = el.upcoming;
+      // Drag the content with the left mouse button.
+      let start = 0, startScroll = 0, dragging = false;
       row.addEventListener('pointerdown', e => {
-        if (e.button !== 0) return;
+        // Leave buttons and inputs alone; capturing the pointer here would swallow their clicks.
+        if (e.button !== 0 || e.target.closest('button, input, select, textarea, label, a')) return;
         dragging = true;
-        startX = e.clientX;
-        startScroll = row.scrollLeft;
+        start = e[axis];
+        startScroll = row[scrollProp];
         row.setPointerCapture(e.pointerId);
         row.classList.add('dragging');
       });
       row.addEventListener('pointermove', e => {
-        if (dragging) row.scrollLeft = startScroll - (e.clientX - startX);
+        if (dragging) row[scrollProp] = startScroll - (e[axis] - start);
       });
-      const end = () => { dragging = false; row.classList.remove('dragging'); };
-      row.addEventListener('pointerup', end);
-      row.addEventListener('pointercancel', end);
-      row.addEventListener('wheel', e => {
-        if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { row.scrollLeft += e.deltaY; e.preventDefault(); }
-      }, { passive: false });
-    })();
+      const endRow = () => { dragging = false; row.classList.remove('dragging'); };
+      row.addEventListener('pointerup', endRow);
+      row.addEventListener('pointercancel', endRow);
+      if (!vertical) {
+        row.addEventListener('wheel', e => {
+          if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { row.scrollLeft += e.deltaY; e.preventDefault(); }
+        }, { passive: false });
+      }
 
-    // Drag the thumb or click the track.
-    (function () {
-      let startX = 0, startScroll = 0, dragging = false;
-      const row = el.upcoming, track = el.scroller, thumb = el.thumb;
-      const ratio = () => (row.scrollWidth - row.clientWidth) / Math.max(1, track.clientWidth - thumb.offsetWidth);
-
+      // Drag the thumb.
+      let tStart = 0, tScroll = 0, tDrag = false;
+      const ratio = () => (row[sizeProp] - row[clientProp]) / Math.max(1, track[clientProp] - thumb[offsetProp]);
       thumb.addEventListener('pointerdown', e => {
         if (e.button !== 0) return;
         e.stopPropagation();
-        dragging = true;
-        startX = e.clientX;
-        startScroll = row.scrollLeft;
+        tDrag = true;
+        tStart = e[axis];
+        tScroll = row[scrollProp];
         thumb.setPointerCapture(e.pointerId);
         track.classList.add('dragging');
       });
       thumb.addEventListener('pointermove', e => {
-        if (dragging) row.scrollLeft = startScroll + (e.clientX - startX) * ratio();
+        if (tDrag) row[scrollProp] = tScroll + (e[axis] - tStart) * ratio();
       });
-      const end = () => { dragging = false; track.classList.remove('dragging'); };
-      thumb.addEventListener('pointerup', end);
-      thumb.addEventListener('pointercancel', end);
+      const endThumb = () => { tDrag = false; track.classList.remove('dragging'); };
+      thumb.addEventListener('pointerup', endThumb);
+      thumb.addEventListener('pointercancel', endThumb);
 
+      // Click the track to jump.
       track.addEventListener('pointerdown', e => {
         if (e.button !== 0 || e.target === thumb) return;
         const rect = track.getBoundingClientRect();
-        const frac = (e.clientX - rect.left) / rect.width;
-        row.scrollLeft = frac * row.scrollWidth - row.clientWidth / 2;
+        const frac = vertical ? (e.clientY - rect.top) / rect.height : (e.clientX - rect.left) / rect.width;
+        row[scrollProp] = frac * row[sizeProp] - row[clientProp] / 2;
       });
-    })();
+
+      return { sync, request };
+    }
+
+    const upcomingScroller = attachScroller(el.upcoming, el.scroller, el.thumb, false);
+    const logScroller = attachScroller(el.log, el.logScroller, el.logThumb, true);
+    const trackScroller = attachScroller(el.evList, el.evScroller, el.evThumb, true);
 
     /* =====================================================================
-       EVENT LOG  (newest line on top, capped)
+       EVENT LOG
+       One list of sources describes everything loggable. Natural ticks
+       append new lines; jumps and scrubs rebuild the whole log from the
+       schedule, so it is complete from 0:00 no matter when you look.
        ===================================================================== */
-    const LOG_MAX_LINES = 150;
+    const LOG_MAX_LINES = 400;
 
-    function logEvent(t, text, color) {
+    // Spawn time of wave k, cached as the schedule is walked.
+    const waveTimes = [FIRST_WAVE_AT];
+    function waveTimeOf(k) {
+      while (waveTimes.length < k) {
+        const last = waveTimes[waveTimes.length - 1];
+        waveTimes.push(last + intervalAt(last));
+      }
+      return waveTimes[k - 1];
+    }
+
+    const cycleSource = (c, cat, color) => ({
+      cat, color,
+      count: t => occurrences(c, t),
+      time: k => c.first + (k - 1) * c.every,
+      text: k => (c.label || c.name) + (k > 1 ? ' respawned' : ' spawned')
+    });
+
+    const LOG_SOURCES = [
+      { cat: 'match', color: '#c4cdc9', count: t => (t >= 0 ? 1 : 0), time: () => 0, text: () => 'Match started' },
+      { cat: 'wave',  color: '#8ec2ff', count: t => waveState(t).count, time: waveTimeOf,
+        text: k => { const one = souls('trooper', waveTimeOf(k)); return 'Wave ' + k + ' · 1 = ' + one + ' · wave = ' + (one * TROOPERS_PER_LANE) + ' souls'; } }
+    ];
+    BOX_CYCLES.forEach(c => LOG_SOURCES.push(cycleSource(c, 'box', '#e8cc96')));
+    CREEP_CYCLES.forEach(c => LOG_SOURCES.push(cycleSource(c, 'creep', '#6ae79a')));
+    EVENTS.forEach(ev => {
+      const cat = (ev.id === 'waves25' || ev.id === 'waves20') ? 'speed' : ev.id;
+      if (ev.id === 'rift') {
+        // Rift times come from the tracker's anchor once you have seen one spawn.
+        LOG_SOURCES.push({
+          cat, color: ev.color, count: riftCount, time: riftTime,
+          text: k => 'Unstable Rift' + (k <= rift.seen.length ? ' · seen' : ' · estimate')
+        });
+        return;
+      }
+      LOG_SOURCES.push({
+        cat, color: ev.color,
+        count: t => occurrences(ev, t),
+        time: k => ev.first + (k - 1) * (ev.every || 0),
+        text: k => ev.name + (ev.every && k > 1 ? ' respawned' : (ev.id === 'midboss' ? ' up' : ''))
+      });
+    });
+
+    const logged = new Array(LOG_SOURCES.length).fill(0);   // occurrences already written per source
+    let logDirty = false;
+
+    function makeLine(t, src, k, flash) {
       const line = document.createElement('div');
-      line.className = 'line first';
-      if (color) line.style.setProperty('--accent', color);
+      line.className = flash ? 'line first' : 'line';
+      line.dataset.cat = src.cat;
+      line.style.setProperty('--accent', src.color);
       const time = document.createElement('span');
       time.className = 't';
       time.textContent = mmss(t);
       const msg = document.createElement('span');
       msg.className = 'msg';
-      msg.textContent = text;
+      msg.textContent = src.text(k);
       line.append(time, msg);
-
-      const old = el.log.firstChild;
-      if (old) old.classList.remove('first');
-      el.log.prepend(line);
-      while (el.log.childElementCount > LOG_MAX_LINES) el.log.lastChild.remove();
+      return line;
     }
 
-    function clearLog() { el.log.textContent = ''; }
-
-    // Per-cycle spawn tracking for boxes and camps, so each group logs its own line.
-    const LOG_CYCLES = [
-      { cycles: BOX_CYCLES,   color: '#e8cc96', counts: new Array(BOX_CYCLES.length).fill(0) },
-      { cycles: CREEP_CYCLES, color: '#6ae79a', counts: new Array(CREEP_CYCLES.length).fill(0) }
-    ];
-
-    function logCycles(t, allowEvents) {
-      for (let g = 0; g < LOG_CYCLES.length; g++) {
-        const group = LOG_CYCLES[g];
-        for (let i = 0; i < group.cycles.length; i++) {
-          const c = group.cycles[i];
-          const n = occurrences(c, t);
-          if (allowEvents && n > group.counts[i]) logEvent(t, c.label + (n > 1 ? ' respawned' : ' spawned'), group.color);
-          group.counts[i] = n;
+    // Natural tick: append whatever fired since the last tick. Scrubbed time only marks the log dirty.
+    function logTick(t, allowEvents) {
+      if (!allowEvents) { logDirty = true; return; }
+      let added = false;
+      for (let i = 0; i < LOG_SOURCES.length; i++) {
+        const src = LOG_SOURCES[i];
+        const n = src.count(t);
+        for (let k = logged[i] + 1; k <= n; k++) {
+          const old = el.log.firstChild;
+          if (old) old.classList.remove('first');
+          el.log.prepend(makeLine(src.time(k), src, k, true));
+          added = true;
         }
+        logged[i] = n;
+      }
+      if (added) {
+        while (el.log.childElementCount > LOG_MAX_LINES) el.log.lastChild.remove();
+        logScroller.request();
       }
     }
 
-    function resetCycleCounts() {
-      for (let g = 0; g < LOG_CYCLES.length; g++) LOG_CYCLES[g].counts.fill(0);
+    // Full rebuild from the schedule for a given match time.
+    const entryBuf = [];
+    function rebuildLog(t) {
+      logDirty = false;
+      entryBuf.length = 0;
+      for (let i = 0; i < LOG_SOURCES.length; i++) {
+        const src = LOG_SOURCES[i];
+        const n = src.count(t);
+        logged[i] = n;
+        for (let k = 1; k <= n; k++) entryBuf.push({ t: src.time(k), src, k });
+      }
+      for (let i = 0; i < manualEntries.length; i++) if (manualEntries[i].t <= t) entryBuf.push(manualEntries[i]);
+      entryBuf.sort((a, b) => a.t - b.t);
+      const frag = document.createDocumentFragment();
+      const stop = Math.max(0, entryBuf.length - LOG_MAX_LINES);
+      for (let i = entryBuf.length - 1; i >= stop; i--) frag.appendChild(makeLine(entryBuf[i].t, entryBuf[i].src, entryBuf[i].k, false));
+      el.log.textContent = '';
+      el.log.appendChild(frag);
+      el.log.scrollTop = 0;
+      logScroller.request();
     }
+
+    function syncLog() { if (logDirty) rebuildLog((elapsedMs() / 1000) | 0); }
+
+    /* =====================================================================
+       MANUAL EVENTS  — midboss kills and a custom timer, driven from the
+       Events panel. They run on match time, so pausing the clock pauses them.
+       ===================================================================== */
+    const MIDBOSS_RESPAWN = [7 * 60, 6 * 60, 5 * 60];   // after the 1st, 2nd, 3rd+ death
+    const midboss = { deaths: 0, respawnAt: null, entry: null };
+    const watch = { running: false, startAt: 0, acc: 0 };   // stopwatch, in match seconds
+    const manualEntries = [];                            // log lines that are not derivable from the schedule
+
+    const nowSeconds = () => (elapsedMs() / 1000) | 0;
+    const midbossWait = deaths => MIDBOSS_RESPAWN[Math.min(Math.max(deaths, 1), MIDBOSS_RESPAWN.length) - 1];
+
+    function logManual(t, cat, color, text) {
+      const src = { cat, color, text: () => text };
+      const entry = { t, src, k: 1, line: null };
+      manualEntries.push(entry);
+      if (!logDirty) {
+        const old = el.log.firstChild;
+        if (old) old.classList.remove('first');
+        entry.line = makeLine(t, src, 1, true);
+        el.log.prepend(entry.line);
+        logScroller.request();
+      }
+      return entry;
+    }
+
+    // Take a manual line back out (undo / cancel).
+    function unlogManual(entry) {
+      if (!entry) return;
+      const i = manualEntries.indexOf(entry);
+      if (i !== -1) manualEntries.splice(i, 1);
+      if (entry.line && entry.line.parentNode) entry.line.remove();
+      logScroller.request();
+    }
+
+    function renderManual(t) {
+      if (midboss.respawnAt === null) {
+        setText(el.mbVal, 'UP');
+        el.mbVal.classList.add('up');
+        setText(el.mbSub, midboss.deaths === 0 ? 'alive since start' : 'kills ' + midboss.deaths + ' · next wait ' + (midbossWait(midboss.deaths + 1) / 60) + ' min');
+        setText(el.mbBtn, 'Done');
+      } else {
+        setText(el.mbVal, mmss(midboss.respawnAt - t));
+        el.mbVal.classList.remove('up');
+        setText(el.mbSub, 'back at ' + mmss(midboss.respawnAt) + ' · ' + souls('midboss', midboss.respawnAt) + ' souls');
+        setText(el.mbBtn, 'Undo');
+      }
+      if (sinner.respawnAt === null && t < SINNER_FIRST) {
+        setText(el.snVal, mmss(SINNER_FIRST - t));
+        el.snVal.classList.remove('up');
+        setText(el.snSub, 'first spawn at ' + mmss(SINNER_FIRST));
+        setText(el.snBtn, 'Done');
+        el.snBtn.disabled = true;
+      } else if (sinner.respawnAt === null) {
+        setText(el.snVal, 'UP');
+        el.snVal.classList.add('up');
+        setText(el.snSub, (sinner.breaks ? 'broken ' + sinner.breaks + ' · ' : '') + souls('sinner', t) + ' souls · respawn 5 min');
+        setText(el.snBtn, 'Done');
+        el.snBtn.disabled = false;
+      } else {
+        setText(el.snVal, mmss(sinner.respawnAt - t));
+        el.snVal.classList.remove('up');
+        setText(el.snSub, 'back at ' + mmss(sinner.respawnAt) + ' · ' + souls('sinner', sinner.respawnAt) + ' souls');
+        setText(el.snBtn, 'Undo');
+        el.snBtn.disabled = false;
+      }
+      setText(el.tmVal, mmss(watchElapsed(t)));
+      setText(el.tmSub, watch.running ? 'running since ' + mmss(watch.startAt) : (watch.acc > 0 ? 'stopped' : 'runs on match time'));
+      setText(el.tmBtn, watch.running ? 'Stop' : 'Start');
+      renderExtra(t);
+    }
+
+    function midbossKilled() {
+      const t = nowSeconds();
+      midboss.deaths++;
+      const wait = midbossWait(midboss.deaths);
+      midboss.respawnAt = t + wait;
+      rejuv.available = true;                            // the Rejuvenator drops in the pit
+      midboss.entry = logManual(t, 'midboss', '#b6ff5c', 'Midboss killed · back at ' + mmss(midboss.respawnAt) + ' (' + (wait / 60) + ' min)');
+      renderManual(t);
+    }
+
+    function midbossUndo() {
+      midboss.deaths = Math.max(0, midboss.deaths - 1);
+      midboss.respawnAt = null;
+      rejuv.available = false;
+      unlogManual(midboss.entry);
+      midboss.entry = null;
+      notifHide(notifs.midboss);
+      renderManual(nowSeconds());
+    }
+
+    // Stopwatch: counts up on match time, so it pauses with the clock.
+    const watchElapsed = t => watch.acc + (watch.running ? Math.max(0, t - watch.startAt) : 0);
+
+    function watchToggle() {
+      const t = nowSeconds();
+      if (watch.running) {
+        watch.acc = watchElapsed(t);
+        watch.running = false;
+        logManual(t, 'timer', '#c4cdc9', 'Stopwatch stopped at ' + mmss(watch.acc));
+      } else {
+        watch.startAt = t;
+        watch.running = true;
+        logManual(t, 'timer', '#c4cdc9', 'Stopwatch started' + (watch.acc > 0 ? ' from ' + mmss(watch.acc) : ''));
+      }
+      renderManual(t);
+    }
+
+    function watchClear() {
+      watch.running = false;
+      watch.acc = 0;
+      renderManual(nowSeconds());
+    }
+
+    // Per-second: expire countdowns and refresh the panel rows.
+    function manualTick(t, allowEvents) {
+      if (midboss.respawnAt !== null && t >= midboss.respawnAt) {
+        midboss.respawnAt = null;
+        logManual(t, 'midboss', '#b6ff5c', 'Midboss up');
+        if (allowEvents) blink(el.mbRow);
+      }
+      if (sinner.respawnAt !== null && t >= sinner.respawnAt) {
+        sinner.respawnAt = null;
+        logManual(t, 'sinner', '#ff9f6e', "Sinner's Sacrifice respawned");
+        if (allowEvents) blink(el.snRow);
+      }
+
+      // Urn: notice scheduled spawns, hold them while an urn is carried, expire carried urns.
+      const uc = occurrences(evById.urn, t);
+      if (uc > urn.count) {
+        urn.count = uc;
+        if (urn.carriedAt !== null) urn.held = true;
+        else { urn.out = true; urn.lastSpawn = evById.urn.first + (uc - 1) * evById.urn.every; }
+      } else if (uc < urn.count) {                      // clock scrubbed backwards
+        urn.count = uc; urn.out = false; urn.held = false; urn.carriedAt = null;
+      }
+      if (urn.carriedAt !== null && t - urn.carriedAt >= URN_CARRY_EXPIRE) {
+        if (allowEvents) logManual(t, 'urn', '#e8cc96', 'Urn expired');
+        urnRelease(t, allowEvents);
+      }
+
+      if (rejuv.endAt !== null && t >= rejuv.endAt) {
+        rejuv.endAt = null;
+        if (allowEvents) logManual(t, 'midboss', '#b6ff5c', 'Rejuvenator buff ended');
+      }
+      renderManual(t);
+    }
+
+    /* ---- Rejuvenator: drops when the midboss dies, 3 min team buff once claimed ---- */
+    const REJUV_DURATION = 3 * 60;
+    const rejuv = { available: false, endAt: null };
+
+    function rejuvPicked() {
+      const t = nowSeconds();
+      rejuv.available = false;
+      rejuv.endAt = t + REJUV_DURATION;
+      logManual(t, 'midboss', '#b6ff5c', 'Rejuvenator picked up · buff until ' + mmss(rejuv.endAt));
+      renderManual(t);
+    }
+
+    /* ---- Soul Urn: scheduled spawns; the next spawn waits while an urn is being carried ---- */
+    const URN_CARRY_EXPIRE = 90;                         // 45s to deliver, then 45s of decay
+    const urn = { count: 0, out: false, carriedAt: null, held: false, lastSpawn: null };
+
+    function urnNext(t) { return urn.held ? null : nextTime(evById.urn, t); }
+    const urnValue = () => souls('urn', urn.lastSpawn === null ? 0 : urn.lastSpawn);
+
+    function urnRelease(t, allowEvents) {                // carried urn gone: let a held spawn happen now
+      urn.carriedAt = null;
+      if (urn.held) {
+        urn.held = false;
+        urn.out = true;
+        urn.lastSpawn = t;
+        if (allowEvents) logManual(t, 'urn', '#e8cc96', 'Soul Urn spawned (delayed)');
+      }
+    }
+
+    function urnPicked() {
+      const t = nowSeconds();
+      urn.out = false;
+      urn.carriedAt = t;
+      logManual(t, 'urn', '#e8cc96', 'Urn picked up · ' + urnValue() + ' souls');
+      renderManual(t);
+    }
+
+    function urnDelivered() {
+      const t = nowSeconds();
+      logManual(t, 'urn', '#e8cc96', 'Urn delivered · ' + urnValue() + ' souls');
+      urnRelease(t, true);
+      renderManual(t);
+    }
+
+    /* ---- Unstable Rift: ±1 min estimate, re-anchored when you see one spawn ---- */
+    const RIFT_EVERY = 7 * 60;
+    const rift = { seen: [] };                           // match times you pressed Spawned, ascending
+
+    // Spawns = every seen time, then 7 min estimates after the last one. No seen times = wiki schedule.
+    function riftSeenUpTo(t) {
+      let n = 0;
+      while (n < rift.seen.length && rift.seen[n] <= t) n++;
+      return n;
+    }
+
+    function riftCount(t) {
+      if (!rift.seen.length) return occurrences(evById.rift, t);
+      const n = riftSeenUpTo(t);
+      if (n < rift.seen.length) return n;
+      return n + ((t - rift.seen[n - 1]) / RIFT_EVERY | 0);
+    }
+
+    function riftTime(k) {
+      if (!rift.seen.length) return evById.rift.first + (k - 1) * RIFT_EVERY;
+      if (k <= rift.seen.length) return rift.seen[k - 1];
+      return rift.seen[rift.seen.length - 1] + (k - rift.seen.length) * RIFT_EVERY;
+    }
+
+    function riftNext(t) {
+      if (!rift.seen.length) return nextTime(evById.rift, t);
+      const n = riftSeenUpTo(t);
+      if (n < rift.seen.length) return rift.seen[n];
+      const last = rift.seen[n - 1];
+      return last + (((t - last) / RIFT_EVERY | 0) + 1) * RIFT_EVERY;
+    }
+
+    function riftSpawned() {
+      const t = nowSeconds();
+      while (rift.seen.length && rift.seen[rift.seen.length - 1] >= t) rift.seen.pop();   // clock was scrubbed back
+      rift.seen.push(t);
+      rebuildLog(t);                                     // re-time the estimated lines; seen ones log as seen
+      renderManual(t);
+    }
+
+    function renderExtra(t) {
+      // Rejuvenator sub-row
+      if (rejuv.endAt !== null) {
+        setText(el.rjVal, mmss(rejuv.endAt - t) + ' left');
+        el.rjBtn.disabled = true;
+        el.rjRow.classList.add('active');
+      } else if (rejuv.available) {
+        setText(el.rjVal, 'on the ground');
+        el.rjBtn.disabled = false;
+        el.rjRow.classList.add('active');
+      } else {
+        setText(el.rjVal, 'drops on kill');
+        el.rjBtn.disabled = true;
+        el.rjRow.classList.remove('active');
+      }
+
+      // Soul Urn
+      if (urn.carriedAt !== null) {
+        setText(el.urVal, mmss(urn.carriedAt + URN_CARRY_EXPIRE - t));
+        el.urVal.classList.remove('up');
+        setText(el.urSub, 'carried · ' + urnValue() + ' souls' + (urn.held ? ' · next spawn held' : ''));
+        setText(el.urBtn, 'Delivered');
+        el.urBtn.disabled = false;
+      } else if (urn.out) {
+        setText(el.urVal, 'OUT');
+        el.urVal.classList.add('up');
+        setText(el.urSub, 'on the map · ' + urnValue() + ' souls');
+        setText(el.urBtn, 'Picked up');
+        el.urBtn.disabled = false;
+      } else {
+        const next = nextTime(evById.urn, t);
+        setText(el.urVal, mmss(next - t));
+        el.urVal.classList.remove('up');
+        setText(el.urSub, (urn.count === 0 ? 'first spawn at ' : 'next at ') + mmss(next) + ' · ' + souls('urn', next) + ' souls');
+        setText(el.urBtn, 'Picked up');
+        el.urBtn.disabled = true;
+      }
+
+      // Unstable Rift
+      const rn = riftNext(t);
+      setText(el.rfVal, mmss(rn - t));
+      setText(el.rfSub, rift.seen.length === 0
+        ? 'estimate ±1 min · press when it appears'
+        : 'last seen ' + mmss(rift.seen[rift.seen.length - 1]) + ' · next ~' + mmss(rn));
+    }
+
+    // Sinner's Sacrifice: scheduled first spawn, then a manual 5 min respawn after each break.
+    const SINNER_FIRST = 8 * 60;
+    const SINNER_RESPAWN = 5 * 60;
+    const sinner = { breaks: 0, respawnAt: null, entry: null };
+
+    function sinnerEndAt(t) {
+      if (sinner.respawnAt !== null) return sinner.respawnAt;
+      return t <= SINNER_FIRST ? SINNER_FIRST : null;
+    }
+
+    function sinnerBroken() {
+      const t = nowSeconds();
+      sinner.breaks++;
+      sinner.respawnAt = t + SINNER_RESPAWN;
+      sinner.entry = logManual(t, 'sinner', '#ff9f6e', "Sinner's Sacrifice broken · back at " + mmss(sinner.respawnAt));
+      renderManual(t);
+    }
+
+    function sinnerUndo() {
+      sinner.breaks = Math.max(0, sinner.breaks - 1);
+      sinner.respawnAt = null;
+      unlogManual(sinner.entry);
+      sinner.entry = null;
+      notifHide(notifs.sinner);
+      renderManual(nowSeconds());
+    }
+
+    function resetManual() {
+      midboss.deaths = 0; midboss.respawnAt = null; midboss.entry = null;
+      sinner.breaks = 0; sinner.respawnAt = null; sinner.entry = null;
+      watch.running = false; watch.acc = 0; watch.startAt = 0;
+      rejuv.available = false; rejuv.endAt = null;
+      urn.count = 0; urn.out = false; urn.carriedAt = null; urn.held = false; urn.lastSpawn = null;
+      rift.seen.length = 0;
+      manualEntries.length = 0;
+    }
+
+    el.mbBtn.addEventListener('click', () => midboss.respawnAt === null ? midbossKilled() : midbossUndo());
+    el.snBtn.addEventListener('click', () => sinner.respawnAt === null ? sinnerBroken() : sinnerUndo());
+    el.rjBtn.addEventListener('click', rejuvPicked);
+    el.urBtn.addEventListener('click', () => urn.carriedAt === null ? urnPicked() : urnDelivered());
+    el.rfBtn.addEventListener('click', riftSpawned);
+    el.tmBtn.addEventListener('click', watchToggle);
+    el.tmClr.addEventListener('click', watchClear);
+
+    function resetLog() {
+      logged.fill(0);
+      logDirty = false;
+      el.log.textContent = '';
+      logScroller.request();
+    }
+
+    // Solo filter: one click shows only that category, a second click on the same one shows everything.
+    const MORE_NAMES = { bridge: 'Bridge buffs', urn: 'Soul Urn', rift: 'Rift', midboss: 'Midboss', sinner: 'Sinners', melee: 'Melee', speed: 'Wave speed', match: 'Match', timer: 'Stopwatch' };
+    let logSolo = '';
+
+    function setLogSolo(cat) {
+      logSolo = (logSolo === cat) ? '' : cat;
+      if (logSolo) el.log.dataset.solo = logSolo; else delete el.log.dataset.solo;
+
+      el.logFilters.classList.toggle('solo', !!logSolo);
+      el.logFilters.querySelectorAll('.fbtn').forEach(b => b.classList.toggle('on', b.dataset.cat === logSolo));
+      el.logMore.querySelectorAll('.mitem').forEach(b => b.classList.toggle('on', b.dataset.cat === logSolo));
+
+      const rare = MORE_NAMES[logSolo];
+      setText(el.logMoreLabel, (rare ? rare : 'More') + ' ▾');
+      el.logMore.classList.toggle('on', !!rare);
+      el.log.scrollTop = 0;
+      logScroller.request();
+    }
+
+    el.logFilters.addEventListener('click', e => {
+      const btn = e.target.closest('.fbtn');
+      if (btn) setLogSolo(btn.dataset.cat);
+    });
+
+    el.logMore.addEventListener('click', e => {
+      const item = e.target.closest('.mitem');
+      if (!item) return;
+      setLogSolo(item.dataset.cat === '' ? logSolo : item.dataset.cat);   // "Show all" clears whatever is soloed
+      el.logMore.open = false;
+    });
+
+    // Close the dropdown when clicking elsewhere.
+    document.addEventListener('pointerdown', e => {
+      if (el.logMore.open && !el.logMore.contains(e.target)) el.logMore.open = false;
+      if (el.settings.open && !el.settings.contains(e.target)) el.settings.open = false;
+    });
 
     /* =====================================================================
        PER-SECOND RENDER
@@ -1320,26 +2499,25 @@
     function renderSecond(t, allowEvents) {
       const w = waveState(t);
       setText(el.waveNext, (w.next - t) + 's');
-      setText(el.waveInfo, 'wave ' + w.count + ' · ' + (w.count * TROOPERS_PER_LANE) + ' troopers in lane');
-      setText(el.waveFoot, 'every ' + w.interval + 's · next at ' + mmss(w.next));
+      const oneTrooper = souls('trooper', t);
+      setText(el.waveInfo, '1 = ' + oneTrooper + ' · wave = ' + (oneTrooper * TROOPERS_PER_LANE) + ' souls');
+      setText(el.waveFoot, 'wave ' + w.count + ' · every ' + w.interval + 's · next at ' + mmss(w.next));
 
-      const box = renderCycles(t, BOX_CYCLES, BOX_FOOT, el.boxValue, el.boxSub, el.boxFoot);
-      const creep = renderCycles(t, CREEP_CYCLES, CREEP_FOOT, el.creepValue, el.creepSub, el.creepFoot);
+      const box = renderCycles(t, BOX_CYCLES, 'box ' + souls('box', t) + ' · tough ' + souls('tough', t) + ' souls · ' + BOX_FOOT, el.boxValue, el.boxSub, el.boxFoot);
+      const creep = renderCycles(t, CREEP_CYCLES, 'haunt S ' + souls('small', t) + ' · M ' + souls('medium', t) + ' · L ' + souls('large', t) + ' souls · ' + CREEP_FOOT, el.creepValue, el.creepSub, el.creepFoot);
 
       // Fire order = voice priority: wave, boxes, creeps, then upcoming events.
       if (allowEvents) {
-        if (w.count > prev.wave) {
-          blink(el.wavePanel);
-          logEvent(t, 'Wave ' + w.count + ' · ' + TROOPERS_PER_LANE + ' per lane', '#8ec2ff');
-        }
+        if (w.count > prev.wave) blink(el.wavePanel);
         if (box > prev.box) blink(el.boxPanel);
         if (creep > prev.creep) blink(el.creepPanel);
       }
 
       scratch.wave = w.count; scratch.box = box; scratch.creep = creep;
-      logCycles(t, allowEvents);
+      logTick(t, allowEvents);
       renderUpcoming(t, allowEvents, prev.events, scratch.events);
       renderNotifications(t, allowEvents, w);
+      manualTick(t, allowEvents);          // after notifications so the midboss card can fire on the exact second
 
       const tmp = prev; prev = scratch; scratch = tmp;   // swap buffers, no allocation per second
     }
@@ -1378,6 +2556,7 @@
       }
 
       render(clock.running && rate === 0);
+      if (rate === 0) syncLog();           // jog released: rebuild the log once for the new time
       if (clock.running || rate !== 0) loopId = requestAnimationFrame(loop);
     }
 
@@ -1389,7 +2568,6 @@
        CONTROLS
        ===================================================================== */
     function start() {
-      if (clock.offset === 0) logEvent(0, 'Match started · wave 1 out', '#c4cdc9');
       clock.running = true;
       clock.stamp = performance.now();
       setText(el.startBtn, 'Pause');
@@ -1410,9 +2588,9 @@
       prev.wave = prev.box = prev.creep = 0;
       for (const k in prev.events) prev.events[k] = 0;
       hideAllNotifications();
-      resetCycleCounts();
-      clearLog();
+      resetManual();
       lastSecond = -1; render(false);
+      resetLog();                          // after the render so the log starts empty at 0:00
     }
 
     el.startBtn.addEventListener('click', () => clock.running ? pause() : start());
@@ -1455,12 +2633,15 @@
       }
       setElapsedMs(secs * 1000);
       lastSecond = -1; render(false);
+      syncLog();
       el.jumpInput.value = '';
       el.jumpInput.blur();
     });
 
     reset();
-    syncThumb();
+    upcomingScroller.sync();
+    logScroller.sync();
+    trackScroller.sync();
   </script>
 </body>
 </html>
