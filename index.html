@@ -1,0 +1,1466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deadlock Screen</title>
+  <!--
+    Art, fonts and logos come from the Deadlock Graphical Library,
+    a community asset kit compiled by Lovely. Credit requested by the author:
+    https://drive.google.com/drive/folders/1PvXmXNP9MLTSjOmg7fUGChsqaE3hxyh7
+  -->
+  <link rel="stylesheet" href="fonts.css">
+  <style>
+    :root {
+      --gap: 16px;
+      --radius: 26px;
+      --green-deep: #061413;
+      --ghost: #6ae79a;
+      --cream: #efddbe;
+      --red: #e8342a;
+      --text: var(--cream);
+      --text-dim: #a9c7b8;
+      --panel-border: rgba(106, 231, 154, 0.22);
+      --font-display: "Modesto", "Cinzel", "Times New Roman", serif;
+      --font-ui: "Reaver", "Radiance", "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: var(--green-deep);
+      font-family: var(--font-display);
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: 0.04em;
+      overflow: hidden;
+    }
+
+    /* ---------- Backdrop: static layers only, no blend modes, no blur ---------- */
+    .bg {
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      background:
+        radial-gradient(ellipse at 50% 40%, rgba(22, 70, 63, 0.25), rgba(6, 20, 19, 0.85) 80%),
+        linear-gradient(180deg, rgba(10, 42, 38, 0.55), rgba(6, 20, 19, 0.8)),
+        url("Assets/backgrounds/menu.png") center / cover no-repeat;
+    }
+
+    .grain {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background: url("Assets/textures/filmgrain.png") repeat;
+      background-size: 512px 512px;
+      opacity: 0.1;
+    }
+
+    .vignette {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.55) 100%);
+    }
+
+    .screen-flash {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      pointer-events: none;
+      opacity: 0;
+      background: radial-gradient(ellipse at center, rgba(232, 52, 42, 0) 40%, rgba(232, 52, 42, 0.55) 100%);
+    }
+
+    /* ---------- Layout ---------- */
+    .page {
+      height: 100vh;
+      padding: var(--gap);
+      display: grid;
+      grid-template-rows: 110px 1fr;
+      gap: var(--gap);
+    }
+
+    .panel {
+      --accent: var(--ghost);
+      --glow: rgba(106, 231, 154, 0.45);
+      --panel-bg: rgba(10, 36, 33, 0.82);
+      --frame: rgba(106, 231, 154, 0.75);
+      position: relative;
+      contain: paint;
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius);
+      background: var(--panel-bg);
+      box-shadow: 0 10px 36px rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* Hand-drawn grunge frame from the kit, tinted with the panel accent */
+    .panel::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: var(--frame);
+      -webkit-mask-box-image: url("Assets/ui/border05.png") 46 / 22px round;
+      mask-border: url("Assets/ui/border05.png") 46 / 22px round;
+      z-index: 1;
+    }
+
+    .panel > * { position: relative; z-index: 2; }
+
+    .panel.theme-blue  { --panel-bg: rgba(12, 32, 60, 0.82);  --frame: rgba(120, 178, 245, 0.75); --accent: #8ec2ff; --glow: rgba(120, 178, 245, 0.45); }
+    .panel.theme-beige { --panel-bg: rgba(52, 44, 28, 0.82);  --frame: rgba(232, 204, 150, 0.75); --accent: #e8cc96; --glow: rgba(232, 204, 150, 0.4); }
+    .panel.theme-grey  { --panel-bg: rgba(32, 38, 38, 0.85);  --frame: rgba(190, 200, 196, 0.6);  --accent: #c4cdc9; --glow: rgba(200, 210, 205, 0.35); }
+
+    .panel-title {
+      position: absolute;
+      top: 18px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-family: var(--font-ui);
+      font-weight: 700;
+      font-size: 0.95rem;
+      letter-spacing: 0.32em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    .panel-title::after {
+      content: "";
+      display: block;
+      margin: 8px auto 0;
+      width: 60%;
+      height: 10px;
+      background: var(--accent);
+      opacity: 0.5;
+      -webkit-mask: url("Assets/ui/border03.png") center / 100% 100% no-repeat;
+      mask: url("Assets/ui/border03.png") center / 100% 100% no-repeat;
+    }
+
+    /* ---------- Header ---------- */
+    .header { padding: 0 32px; justify-content: space-between; gap: 24px; }
+
+    .brand { display: flex; align-items: center; gap: 22px; height: 100%; flex: 0 0 auto; }
+    .brand .mark { height: 64px; width: auto; }
+    .brand .wordmark { height: 46px; width: auto; }
+
+    .timectl {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex: 1 1 auto;
+      justify-content: center;
+      font-family: var(--font-ui);
+    }
+
+    .jog-wrap { display: flex; align-items: center; gap: 10px; }
+    .jog-cap { font-size: 0.95rem; letter-spacing: 0.1em; color: var(--text-dim); user-select: none; }
+    .jog-wrap.active .jog-cap { color: var(--ghost); }
+
+    .jog {
+      -webkit-appearance: none;
+      appearance: none;
+      width: min(320px, 24vw);
+      height: 16px;
+      margin: 0;
+      border-radius: 999px;
+      border: 1px solid var(--panel-border);
+      outline: none;
+      cursor: grab;
+      background: linear-gradient(90deg,
+        rgba(232, 52, 42, 0.55) 0%, rgba(232, 52, 42, 0.15) 30%,
+        rgba(106, 231, 154, 0.12) 50%,
+        rgba(106, 231, 154, 0.18) 70%, rgba(106, 231, 154, 0.6) 100%);
+    }
+
+    .jog:active { cursor: grabbing; }
+
+    .jog::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--cream);
+      border: 3px solid var(--green-deep);
+    }
+
+    .jog::-moz-range-thumb {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--cream);
+      border: 3px solid var(--green-deep);
+    }
+
+    .jog-rate {
+      min-width: 86px;
+      text-align: center;
+      font-size: 0.8rem;
+      letter-spacing: 0.12em;
+      color: var(--text-dim);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .jog-wrap.active .jog-rate { color: var(--cream); }
+
+    .jump { display: flex; align-items: center; gap: 6px; margin: 0; }
+
+    .jump input {
+      width: 96px;
+      height: 40px;
+      padding: 0 12px;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.2rem;
+      letter-spacing: 0.08em;
+      text-align: center;
+      color: var(--cream);
+      background: rgba(6, 20, 19, 0.6);
+      border: 1px solid var(--panel-border);
+      border-radius: 10px;
+      outline: none;
+    }
+
+    .jump input:focus { border-color: var(--ghost); }
+    .jump input.bad { border-color: var(--red); }
+    .jump input::placeholder { color: rgba(169, 199, 184, 0.5); }
+
+    .pill {
+      font-family: var(--font-ui);
+      font-weight: 700;
+      font-size: 0.85rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      background: transparent;
+      border: 1px solid rgba(169, 199, 184, 0.35);
+      border-radius: 999px;
+      padding: 10px 18px;
+      cursor: pointer;
+    }
+
+    .pill:hover { color: var(--cream); border-color: var(--cream); }
+    .pill.off { opacity: 0.5; text-decoration: line-through; }
+
+    .controls { display: flex; align-items: center; gap: 14px; flex: 0 0 auto; }
+
+    .start-btn {
+      position: relative;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.6rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      width: 210px;
+      height: 72px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--green-deep);
+      cursor: pointer;
+    }
+
+    .start-btn::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: var(--ghost);
+      -webkit-mask: url("Assets/ui/button01.png") center / 100% 100% no-repeat;
+      mask: url("Assets/ui/button01.png") center / 100% 100% no-repeat;
+      z-index: -1;
+    }
+
+    .start-btn:hover::before { background: #8ff5b4; }
+    .start-btn:active { transform: scale(0.96); }
+
+    /* ---------- Main grid ---------- */
+    .main { display: grid; grid-template-columns: 1.5fr 1fr 3.4fr; gap: var(--gap); min-height: 0; }
+    .middle { display: grid; grid-template-rows: 1fr 1fr; gap: var(--gap); min-height: 0; }
+    .right { display: grid; grid-template-rows: 1.4fr 1.1fr 1.2fr; gap: var(--gap); min-height: 0; }
+
+    /* ---------- Timer ---------- */
+    .timer {
+      display: flex;
+      font-size: clamp(4rem, 10.5vw, 13rem);
+      line-height: 1;
+      color: var(--cream);
+      text-shadow: 0 0 18px var(--glow), 0 4px 0 rgba(0, 0, 0, 0.7);
+    }
+
+    .timer span { display: inline-block; text-align: center; width: 0.66em; }
+    .timer span.sep { width: 0.34em; color: var(--accent); }
+
+    /* ---------- Counters ---------- */
+    .stats { display: grid; grid-template-columns: 1fr 1fr 1.25fr; gap: var(--gap); min-height: 0; }
+
+    .stat { flex-direction: column; gap: 6px; padding: 60px 14px 14px; }
+
+    .stat .value {
+      font-size: clamp(2.6rem, 4.8vw, 5.4rem);
+      line-height: 1;
+      color: var(--cream);
+      text-shadow: 0 0 14px var(--glow), 0 3px 0 rgba(0, 0, 0, 0.7);
+      white-space: nowrap;
+    }
+
+    .stat .value.up { color: var(--accent); }
+
+    .stat .sub {
+      font-family: var(--font-ui);
+      font-size: 0.82rem;
+      letter-spacing: 0.12em;
+      color: var(--text-dim);
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    .stat .sub.faint { opacity: 0.65; font-size: 0.74rem; }
+
+    /* Panels with an icon beside the numbers (boxes, creeps, waves) */
+    .stat.with-img { flex-direction: row; gap: 18px; }
+    .stat.with-img .stat-img { height: 100%; max-height: 96px; width: auto; flex: 0 0 auto; }
+    .stat.with-img .numbers { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
+    .stat.with-img .numbers .sub { text-align: left; }
+    .stat.with-img .value small { font-size: 0.4em; letter-spacing: 0.12em; color: var(--text-dim); margin-left: 0.2em; }
+
+    /* ---------- Upcoming strip ---------- */
+    .upcoming {
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: flex-start;
+      padding: 18px 26px 16px;
+      gap: 10px;
+    }
+
+    .upcoming .panel-title { position: static; }
+    .upcoming .panel-title::after { display: none; }
+
+    /* Full-width scroller under the title */
+    .scroller {
+      position: relative;
+      height: 12px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--panel-border);
+      cursor: pointer;
+      flex: 0 0 auto;
+    }
+
+    .scroller .thumb {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 100%;
+      border-radius: 999px;
+      background: var(--accent);
+      opacity: 0.55;
+      cursor: grab;
+      will-change: transform, width;
+    }
+
+    .scroller .thumb:hover, .scroller.dragging .thumb { opacity: 0.85; }
+    .scroller.dragging .thumb { cursor: grabbing; }
+
+    .upcoming-row {
+      display: flex;
+      gap: 12px;
+      align-items: stretch;
+      flex: 1 1 auto;
+      min-height: 0;
+      padding: 6px 4px 8px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      overscroll-behavior-x: contain;
+      scrollbar-width: none;
+      cursor: grab;
+      user-select: none;
+    }
+
+    .upcoming-row::-webkit-scrollbar { display: none; }
+    .upcoming-row.dragging { cursor: grabbing; }
+
+    .event {
+      --accent: var(--ghost);
+      --glow: rgba(106, 231, 154, 0.45);
+      contain: content;
+      position: relative;
+      overflow: hidden;
+      flex: 0 0 210px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
+      padding: 14px 12px;
+      border-radius: 18px;
+      background: rgba(6, 20, 19, 0.55);
+      border: 1px solid var(--panel-border);
+    }
+
+    /* Blurred artwork fills the card; a gradient keeps the text readable.
+       The blur is a static filter on an image, rasterised once, not a backdrop filter. */
+    .event .backdrop {
+      position: absolute;
+      inset: -8px;
+      background: center / cover no-repeat;
+      filter: blur(2px) brightness(0.7) saturate(1.1);
+      pointer-events: none;
+    }
+
+    .event .backdrop::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(6, 20, 19, 0.05) 0%, rgba(6, 20, 19, 0.65) 60%, rgba(6, 20, 19, 0.9) 100%);
+    }
+
+    /* Cards without art get a big watermark letter instead */
+    .event .glyph {
+      position: absolute;
+      top: -6px;
+      right: 6px;
+      font-family: var(--font-display);
+      font-size: 7rem;
+      line-height: 1;
+      color: var(--accent);
+      opacity: 0.14;
+      pointer-events: none;
+    }
+
+    .event .name, .event .when, .event .note { position: relative; }
+
+    .event .name {
+      font-family: var(--font-ui);
+      font-size: 0.78rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .event .when {
+      font-size: 2.3rem;
+      line-height: 1;
+      color: var(--cream);
+      text-shadow: 0 2px 0 rgba(0, 0, 0, 0.7);
+      white-space: nowrap;
+    }
+
+    .event .when.up { color: var(--accent); }
+
+    .event .note {
+      font-family: var(--font-ui);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      opacity: 0.65;
+      text-align: center;
+    }
+
+    .event.soon { border-color: var(--accent); }
+    .event.soon .when { color: #fff; }
+
+    /* ---------- Event log (left panel) ---------- */
+    .log {
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: flex-start;
+      padding: 18px 22px 16px;
+      gap: 12px;
+    }
+
+    .log .panel-title { position: static; }
+
+    .log-list {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding-right: 6px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(106, 231, 154, 0.35) transparent;
+    }
+
+    .log-list::-webkit-scrollbar { width: 6px; }
+    .log-list::-webkit-scrollbar-thumb { background: rgba(106, 231, 154, 0.35); border-radius: 999px; }
+
+    .line {
+      contain: content;
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      padding: 5px 10px;
+      border-left: 3px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+      background: rgba(255, 255, 255, 0.03);
+      font-family: var(--font-ui);
+      font-size: 0.84rem;
+      letter-spacing: 0.08em;
+      line-height: 1.3;
+    }
+
+    .line .t {
+      flex: 0 0 auto;
+      min-width: 5ch;
+      font-family: var(--font-display);
+      font-size: 1rem;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .line .msg { color: var(--cream); }
+
+    .line.first {
+      animation: lineIn 0.3s ease-out;
+    }
+
+    @keyframes lineIn {
+      from { background: rgba(232, 52, 42, 0.5); }
+      to { background: rgba(255, 255, 255, 0.03); }
+    }
+
+    /* ---------- Notification drawer (right edge) ---------- */
+    .drawer {
+      position: fixed;
+      top: 142px;
+      right: 24px;
+      width: min(620px, 44vw);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      z-index: 70;
+      pointer-events: none;
+    }
+
+    .notif {
+      --accent: var(--ghost);
+      contain: content;
+      transform: translateX(120%);
+      opacity: 0;
+      transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s;
+      background: rgba(8, 24, 22, 0.97);
+      border: 3px solid var(--accent);
+      border-radius: 28px;
+      overflow: hidden;
+      box-shadow: 0 16px 50px rgba(0, 0, 0, 0.7);
+    }
+
+    .notif.in { transform: none; opacity: 1; }
+
+    .notif .head {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      padding: 16px 24px;
+      background: rgba(255, 255, 255, 0.07);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .notif .icon {
+      flex: 0 0 auto;
+      width: 150px;
+      height: 150px;
+      border-radius: 26px;
+      background: var(--accent) center / cover no-repeat;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-size: 3rem;
+      color: var(--green-deep);
+    }
+
+    .notif .icon.img { background-color: rgba(6, 20, 19, 0.8); border: 3px solid var(--accent); }
+
+    .notif .title {
+      flex: 1 1 auto;
+      min-width: 0;
+      font-family: var(--font-display);
+      font-size: 2.6rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--cream);
+      line-height: 1.05;
+    }
+
+    .notif .title small {
+      display: block;
+      font-family: var(--font-ui);
+      font-size: 1rem;
+      letter-spacing: 0.22em;
+      color: var(--text-dim);
+      margin-top: 6px;
+    }
+
+    .notif .body {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      padding: 16px 24px 22px;
+    }
+
+    .notif .time {
+      font-family: var(--font-display);
+      font-size: 5.2rem;
+      line-height: 1;
+      color: var(--accent);
+      text-shadow: 0 3px 0 rgba(0, 0, 0, 0.7);
+      min-width: 3.2ch;
+      white-space: nowrap;
+    }
+
+    .notif .info {
+      font-family: var(--font-ui);
+      font-size: 1.1rem;
+      letter-spacing: 0.12em;
+      color: var(--cream);
+      line-height: 1.5;
+    }
+
+    .notif .info small {
+      display: block;
+      font-size: 0.85rem;
+      letter-spacing: 0.14em;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    @keyframes blinkNotif {
+      0%, 35%, 75%, 100% { background-color: rgba(8, 24, 22, 0.96); }
+      10%, 50% { background-color: rgba(232, 52, 42, 0.9); }
+    }
+
+    .notif.now { animation: blinkNotif 0.8s steps(1, end) 1; border-color: #ffb3ad; }
+    .notif.now .time { color: #fff; }
+
+    /* ---------- Red double-blink ---------- */
+    @keyframes blinkPanel {
+      0%, 35%, 75%, 100% { background-color: var(--panel-bg); }
+      10%, 50% { background-color: rgba(232, 52, 42, 0.85); }
+    }
+
+    @keyframes blinkFrame {
+      0%, 35%, 75%, 100% { background-color: var(--frame); }
+      10%, 50% { background-color: #ffb3ad; }
+    }
+
+    @keyframes blinkEvent {
+      0%, 35%, 75%, 100% { background-color: rgba(6, 20, 19, 0.55); }
+      10%, 50% { background-color: rgba(232, 52, 42, 0.85); }
+    }
+
+    @keyframes blinkScreen {
+      0%, 35%, 75%, 100% { opacity: 0; }
+      10%, 50% { opacity: 1; }
+    }
+
+    .stat.blink { animation: blinkPanel 0.8s steps(1, end) 1; }
+    .stat.blink::before { animation: blinkFrame 0.8s steps(1, end) 1; }
+    .stat.blink .value { color: #fff; }
+    .event.blink { animation: blinkEvent 0.8s steps(1, end) 1; }
+    .screen-flash.blink { animation: blinkScreen 0.8s steps(1, end) 1; }
+  </style>
+</head>
+<body>
+  <div class="bg"></div>
+  <div class="grain"></div>
+  <div class="vignette"></div>
+  <div class="screen-flash" id="screenFlash"></div>
+  <div class="drawer" id="drawer"></div>
+
+  <div class="page">
+    <header class="panel header">
+      <div class="brand">
+        <img class="mark" src="Assets/logos/ghostly-mark.svg" alt="">
+        <img class="wordmark" src="Assets/logos/classic-wordmark.svg" alt="Deadlock">
+      </div>
+
+      <div class="timectl">
+        <div class="jog-wrap" id="jogWrap">
+          <span class="jog-cap">&#9664;&#9664;</span>
+          <input class="jog" id="jog" type="range" min="-100" max="100" value="0" step="1" aria-label="Scrub time">
+          <span class="jog-cap">&#9654;&#9654;</span>
+          <span class="jog-rate" id="jogRate">scrub</span>
+        </div>
+        <form class="jump" id="jumpForm" autocomplete="off">
+          <input id="jumpInput" type="text" placeholder="mm:ss" aria-label="Jump to time">
+          <button class="pill" type="submit">Set</button>
+        </form>
+      </div>
+
+      <div class="controls">
+        <button class="pill" id="voiceBtn" type="button" title="Voice callouts">Voice on</button>
+        <button class="pill" id="resetBtn" type="button">Reset</button>
+        <button class="start-btn" id="startBtn" type="button">Start</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="panel log">
+        <div class="panel-title">Log</div>
+        <div class="log-list" id="log"></div>
+      </section>
+
+      <section class="middle">
+        <div class="panel"><div class="panel-title">Objectives</div></div>
+        <div class="panel"><div class="panel-title">Items</div></div>
+      </section>
+
+      <section class="right">
+        <div class="panel theme-grey">
+          <div class="panel-title">Match time</div>
+          <div class="timer" id="timer"></div>
+        </div>
+
+        <div class="stats">
+          <div class="panel stat with-img theme-beige" id="boxPanel" data-voice="Boxes">
+            <div class="panel-title">Boxes</div>
+            <img class="stat-img" src="Assets/img/box.png" alt="">
+            <div class="numbers">
+              <div class="value" id="boxValue">--</div>
+              <div class="sub" id="boxSub"></div>
+              <div class="sub faint" id="boxFoot"></div>
+            </div>
+          </div>
+
+          <div class="panel stat with-img" id="creepPanel" data-voice="Creeps">
+            <div class="panel-title">Creeps</div>
+            <img class="stat-img" src="Assets/img/creeper.png" alt="">
+            <div class="numbers">
+              <div class="value" id="creepValue">--</div>
+              <div class="sub" id="creepSub"></div>
+              <div class="sub faint" id="creepFoot"></div>
+            </div>
+          </div>
+
+          <div class="panel stat with-img theme-blue" id="wavePanel" data-voice="Wave">
+            <div class="panel-title">Trooper waves</div>
+            <img class="stat-img" src="Assets/img/trooper.png" alt="">
+            <div class="numbers">
+              <div class="value"><span id="waveNext">--</span><small>NEXT</small></div>
+              <div class="sub" id="waveInfo"></div>
+              <div class="sub faint" id="waveFoot"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel upcoming">
+          <div class="panel-title">Upcoming events</div>
+          <div class="scroller" id="scroller"><div class="thumb" id="scrollThumb"></div></div>
+          <div class="upcoming-row" id="upcoming"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    'use strict';
+
+    /* =====================================================================
+       GAME DATA  (deadlock.wiki) — all times in seconds
+       ===================================================================== */
+    const COUNTDOWN_WINDOW = 30;   // show "--" until this close to a spawn
+    const KILL_TIME = 4;           // assumed time to clear a camp / break a box
+
+    // Trooper waves: every 30s until 20:00, every 25s until 35:00, then every 20s.
+    const WAVE_SCHEDULE = [
+      { until: 20 * 60, interval: 30 },
+      { until: 35 * 60, interval: 25 },
+      { until: Infinity, interval: 20 }
+    ];
+    const FIRST_WAVE_AT = 0;
+    const TROOPERS_PER_LANE = 4;
+
+    // Repeating cycles: first spawn, then every (respawn + kill time).
+    const BOX_CYCLES = [
+      { label: 'Map boxes',          first: 3 * 60,  every: 3 * 60 + KILL_TIME },
+      { label: 'Bell Tower · Plaza', first: 5 * 60,  every: 3 * 60 + KILL_TIME },
+      { label: 'Tunnels',            first: 5 * 60,  every: 5 * 60 + KILL_TIME },
+      { label: 'Times Square room',  first: 10 * 60, every: 3 * 60 + KILL_TIME }
+    ];
+    const BOX_FOOT = 'respawn 3:00 after break · tunnels 5:00 · +4s kill';
+
+    const CREEP_CYCLES = [
+      { label: 'Small camps',  first: 2 * 60, every: 85 + KILL_TIME },
+      { label: 'Medium camps', first: 5 * 60, every: 290 + KILL_TIME },
+      { label: 'Large camps',  first: 8 * 60, every: 335 + KILL_TIME }
+    ];
+    const CREEP_FOOT = 'respawn S 1:25 · M 4:50 · L 5:35 · +4s kill';
+
+    // Upcoming events: first spawn and repeat interval (every: null = one-off).
+    const EVENTS = [
+      { id: 'bridge',  name: 'Bridge buffs',    glyph: 'B', first: 5 * 60,  every: 5 * 60, note: 'all buffs from 10:00',             color: '#8ec2ff', voice: 'Bridge buffs', img: 'Assets/img/buff.png' },
+      { id: 'urn',     name: 'Soul Urn',        glyph: 'U', first: 10 * 60, every: 5 * 60, note: 'held while carried',               color: '#e8cc96', voice: 'Urn' },
+      { id: 'rift',    name: 'Unstable Rift',   glyph: 'R', first: 11 * 60, every: 7 * 60, note: 'give or take a minute',            color: '#c79bff', voice: 'Rift' },
+      { id: 'melee',   name: 'Melee troopers',  glyph: 'M', first: 5 * 60,  every: null,   note: 'join every wave',                  color: '#8ec2ff', voice: 'Melee troopers' },
+      { id: 'waves25', name: 'Waves every 25s', glyph: 'W', first: 20 * 60, every: null,   note: 'down from 30s',                    color: '#8ec2ff', voice: 'Faster waves' },
+      { id: 'waves20', name: 'Waves every 20s', glyph: 'W', first: 35 * 60, every: null,   note: 'down from 25s',                    color: '#8ec2ff', voice: 'Faster waves' },
+      { id: 'midboss', name: 'Midboss',         glyph: '',  first: 0,       every: null,   note: 'respawn 7 / 6 / 5 min after kill', color: '#b6ff5c', voice: 'Midboss', img: 'Assets/img/midboss.png', imgPos: '62% 32%', upLabel: 'UP' }
+    ];
+
+    // Jog bar: match seconds per real second at full deflection, cubic curve.
+    const JOG_MAX_RATE = 600;
+    const JOG_DEADZONE = 6;
+
+    /* =====================================================================
+       PURE HELPERS
+       ===================================================================== */
+    const pad = n => (n < 10 ? '0' : '') + n;
+
+    function mmss(total) {
+      total = total < 0 ? 0 : Math.round(total);
+      const h = (total / 3600) | 0;
+      const m = ((total % 3600) / 60) | 0;
+      const s = total % 60;
+      return h > 0 ? h + ':' + pad(m) + ':' + pad(s) : pad(m) + ':' + pad(s);
+    }
+
+    function intervalAt(t) {
+      for (let i = 0; i < WAVE_SCHEDULE.length; i++) if (t < WAVE_SCHEDULE[i].until) return WAVE_SCHEDULE[i].interval;
+      return WAVE_SCHEDULE[WAVE_SCHEDULE.length - 1].interval;
+    }
+
+    // Wave count and next wave time. Walks the schedule; ~100 steps per hour of match, once per second.
+    function waveState(t) {
+      let count = 0, at = FIRST_WAVE_AT;
+      while (at <= t) { count++; at += intervalAt(at); }
+      return { count, next: at, interval: intervalAt(t > FIRST_WAVE_AT ? t : FIRST_WAVE_AT) };
+    }
+
+    // Occurrences so far / next time for anything with {first, every}.
+    const occurrences = (c, t) => t < c.first ? 0 : (c.every ? ((t - c.first) / c.every | 0) + 1 : 1);
+    const nextTime = (c, t) => t < c.first ? c.first : (c.every ? c.first + occurrences(c, t) * c.every : null);
+
+    function parseTime(str) {
+      const parts = str.trim().split(':');
+      if (!parts.length || parts.some(p => p.trim() === '' || isNaN(p))) return null;
+      const n = parts.map(Number);
+      if (n.length === 1) return n[0] * 60;
+      if (n.length === 2) return n[0] * 60 + n[1];
+      if (n.length === 3) return n[0] * 3600 + n[1] * 60 + n[2];
+      return null;
+    }
+
+    /* =====================================================================
+       DOM
+       ===================================================================== */
+    const $ = id => document.getElementById(id);
+    const el = {
+      timer: $('timer'), startBtn: $('startBtn'), resetBtn: $('resetBtn'), voiceBtn: $('voiceBtn'),
+      jog: $('jog'), jogWrap: $('jogWrap'), jogRate: $('jogRate'),
+      jumpForm: $('jumpForm'), jumpInput: $('jumpInput'), screenFlash: $('screenFlash'),
+      boxPanel: $('boxPanel'), boxValue: $('boxValue'), boxSub: $('boxSub'), boxFoot: $('boxFoot'),
+      creepPanel: $('creepPanel'), creepValue: $('creepValue'), creepSub: $('creepSub'), creepFoot: $('creepFoot'),
+      wavePanel: $('wavePanel'), waveNext: $('waveNext'), waveInfo: $('waveInfo'), waveFoot: $('waveFoot'),
+      upcoming: $('upcoming'), scroller: $('scroller'), thumb: $('scrollThumb'), drawer: $('drawer'), log: $('log')
+    };
+
+    // Cheap text setter: skips the DOM write when nothing changed.
+    function setText(node, text) {
+      if (node.__t !== text) { node.__t = text; node.textContent = text; }
+    }
+
+    /* =====================================================================
+       CLOCK
+       ===================================================================== */
+    const clock = { running: false, offset: 0, stamp: 0 };
+
+    const elapsedMs = () => clock.offset + (clock.running ? performance.now() - clock.stamp : 0);
+
+    function setElapsedMs(ms) {
+      if (ms < 0) ms = 0;
+      clock.offset = ms - (clock.running ? performance.now() - clock.stamp : 0);
+    }
+
+    /* =====================================================================
+       VOICE  (browser speech synthesis; utterances queue in call order)
+       ===================================================================== */
+    const voice = { on: true, pick: null };
+
+    function pickVoice() {
+      if (!window.speechSynthesis) return;
+      const all = speechSynthesis.getVoices();
+      const en = all.filter(v => /^en/i.test(v.lang));
+      voice.pick =
+        en.find(v => /Natural/i.test(v.name) && /Guy|Ryan|Christopher|Eric|Roger|Davis/i.test(v.name)) ||
+        en.find(v => /Natural/i.test(v.name)) ||
+        en.find(v => /David|Mark|George/i.test(v.name)) ||
+        en[0] || all[0] || null;
+    }
+
+    function speak(text) {
+      if (!voice.on || !text || !window.speechSynthesis) return;
+      if (!voice.pick) pickVoice();
+      const u = new SpeechSynthesisUtterance(text);
+      if (voice.pick) u.voice = voice.pick;
+      u.rate = 1.05;
+      u.pitch = 0.9;
+      speechSynthesis.speak(u);
+    }
+
+    if (window.speechSynthesis) {
+      pickVoice();
+      speechSynthesis.addEventListener('voiceschanged', pickVoice);
+    }
+
+    /* =====================================================================
+       BLINK  (panel + screen flash, voice callout)
+       ===================================================================== */
+    function blink(node) {
+      speak(node.dataset.voice);
+      node.classList.remove('blink');
+      el.screenFlash.classList.remove('blink');
+      void node.offsetWidth;                         // restart the CSS animation
+      node.classList.add('blink');
+      el.screenFlash.classList.add('blink');
+      clearTimeout(node.__blinkTimer);
+      node.__blinkTimer = setTimeout(() => {
+        node.classList.remove('blink');
+        el.screenFlash.classList.remove('blink');
+      }, 900);
+    }
+
+    /* =====================================================================
+       TIMER DIGITS  (8 fixed spans, only changed characters are written)
+       ===================================================================== */
+    const digitNodes = [];
+    'HH:MM:SS'.split('').forEach(ch => {
+      const s = document.createElement('span');
+      if (ch === ':') { s.className = 'sep'; s.textContent = ':'; }
+      el.timer.appendChild(s);
+      digitNodes.push(s);
+    });
+
+    function renderTimer(seconds) {
+      const h = (seconds / 3600) | 0, m = ((seconds % 3600) / 60) | 0, s = seconds % 60;
+      const str = pad(h) + ':' + pad(m) + ':' + pad(s);
+      for (let i = 0; i < 8; i++) {
+        if (i === 2 || i === 5) continue;
+        const c = str[i];
+        if (digitNodes[i].__t !== c) { digitNodes[i].__t = c; digitNodes[i].textContent = c; }
+      }
+    }
+
+    /* =====================================================================
+       COUNTERS
+       ===================================================================== */
+    // Soonest next spawn across a set of cycles. Reuses one result object; no allocation per call.
+    const soonestBuf = { next: Infinity, label: '', total: 0 };
+    function soonestCycle(cycles, t) {
+      let next = Infinity, label = '', total = 0;
+      for (let i = 0; i < cycles.length; i++) {
+        const c = cycles[i];
+        total += occurrences(c, t);
+        const n = nextTime(c, t);
+        if (n !== null && n < next) { next = n; label = c.label; }
+      }
+      soonestBuf.next = next; soonestBuf.label = label; soonestBuf.total = total;
+      return soonestBuf;
+    }
+
+    function renderCycles(t, cycles, foot, valueEl, subEl, footEl) {
+      const s = soonestCycle(cycles, t);
+      const remaining = s.next - t;
+      if (remaining <= COUNTDOWN_WINDOW) {
+        setText(valueEl, remaining + 's');
+        setText(subEl, 'until ' + s.label.toLowerCase());
+      } else {
+        setText(valueEl, '--');
+        setText(subEl, s.label.toLowerCase() + ' at ' + mmss(s.next));
+      }
+      setText(footEl, foot);
+      return s.total;
+    }
+
+    /* =====================================================================
+       NOTIFICATION DRAWER
+       Cards slide in `lead` seconds before a spawn, count down, flash on
+       the spawn, then slide out. Sources either track trooper waves or a
+       list of cycles / events.
+       ===================================================================== */
+    const evById = {};
+    EVENTS.forEach(ev => { evById[ev.id] = ev; });
+
+    const NOTIFY = [
+      { id: 'wave',   title: 'Trooper wave',     sub: 'lane push',             lead: 10, color: '#8ec2ff', img: 'Assets/img/trooper.png', wave: true,
+        detail: '4 per lane · 3 ranged + 1 medic, melee from 5:00' },
+      { id: 'boxes',  title: 'Boxes',            sub: 'crates respawn',        lead: 5 , color: '#e8cc96', img: 'Assets/img/box.png', cycles: BOX_CYCLES,
+        detail: 'respawn 3:00 after break · tunnels 5:00' },
+      { id: 'small',  title: 'Small camps',      sub: 'tier 1 creeps',         lead: 5 , color: '#6ae79a', img: 'Assets/img/creeper.png', cycles: [CREEP_CYCLES[0]],
+        detail: '3 haunts · respawn 1:25 after clear' },
+      { id: 'medium', title: 'Sinners & tier 2', sub: 'medium camps',          lead: 5 , color: '#6ae79a', img: 'Assets/img/creeper.png', cycles: [CREEP_CYCLES[1]],
+        detail: 'clear the sinner machine too · respawn 4:50' },
+      { id: 'large',  title: 'Large camps',      sub: 'tier 3 creeps',         lead: 5 , color: '#6ae79a', img: 'Assets/img/creeper.png', cycles: [CREEP_CYCLES[2]],
+        detail: 'up to tier 3 · respawn 5:35 after clear' },
+      { id: 'bridge', title: 'Bridge buffs',     sub: 'heavy melee to claim',  lead: 25, color: '#8ec2ff', img: 'Assets/img/buff.png', cycles: [evById.bridge],
+        detail: 'casting · gun · movement · survival' },
+      { id: 'urn',    title: 'Soul Urn',         sub: 'deliver for souls',     lead: 45, color: '#e8cc96', glyph: 'U', cycles: [evById.urn],
+        detail: 'every 5 min · next spawn waits while carried' },
+      { id: 'rift',   title: 'Unstable Rift',    sub: 'give or take a minute', lead: 5 , color: '#c79bff', glyph: 'R', cycles: [evById.rift],
+        detail: 'side lane bridge · rift troopers for the winner' }
+    ];
+
+    const NOTIF_HOLD_MS = 4800;   // red blink (0.8s) + 4s hold before sliding out
+    const NOTIF_OUT_MS = 400;     // matches the CSS slide transition
+
+    const notifs = {};
+    NOTIFY.forEach(src => {
+      const node = document.createElement('div');
+      node.className = 'notif';
+      node.style.setProperty('--accent', src.color);
+
+      const head = document.createElement('div');
+      head.className = 'head';
+      const icon = document.createElement('div');
+      icon.className = src.img ? 'icon img' : 'icon';
+      if (src.img) icon.style.backgroundImage = 'url("' + src.img + '")';
+      else icon.textContent = src.glyph;
+      const title = document.createElement('div');
+      title.className = 'title';
+      title.textContent = src.title;
+      const small = document.createElement('small');
+      small.textContent = src.sub;
+      title.appendChild(small);
+      head.append(title, icon);   // icon sits on the right edge for a quick read
+
+      const body = document.createElement('div');
+      body.className = 'body';
+      const time = document.createElement('div');
+      time.className = 'time';
+      const info = document.createElement('div');
+      info.className = 'info';
+      const infoMain = document.createElement('span');
+      const infoDetail = document.createElement('small');
+      infoDetail.textContent = src.detail || '';
+      info.append(infoMain, infoDetail);
+      body.append(time, info);
+
+      node.append(head, body);
+      notifs[src.id] = { src, node, time, info: infoMain, state: 0, timer: 0 };   // state: 0 hidden, 1 in, 2 now
+    });
+
+    function notifShow(n) {
+      clearTimeout(n.timer);
+      n.node.classList.remove('now');
+      if (n.state === 0) {
+        el.drawer.appendChild(n.node);
+        void n.node.offsetWidth;            // commit the off-screen position before sliding in
+        n.node.classList.add('in');
+      }
+      n.state = 1;
+    }
+
+    function notifHide(n) {
+      clearTimeout(n.timer);
+      if (n.state === 0) return;
+      n.state = 0;
+      n.node.classList.remove('in', 'now');
+      n.timer = setTimeout(() => { if (n.state === 0 && n.node.parentNode) n.node.remove(); }, NOTIF_OUT_MS);
+    }
+
+    function notifFire(n) {
+      n.state = 2;
+      setText(n.time, 'NOW');
+      n.node.classList.remove('now');
+      void n.node.offsetWidth;
+      n.node.classList.add('now');
+      clearTimeout(n.timer);
+      n.timer = setTimeout(() => notifHide(n), NOTIF_HOLD_MS);
+    }
+
+    function renderNotifications(t, allowEvents, wave) {
+      for (let i = 0; i < NOTIFY.length; i++) {
+        const src = NOTIFY[i], n = notifs[src.id];
+        let next, info;
+        if (src.wave) {
+          next = wave.next;
+          info = 'Wave ' + (wave.count + 1) + ' at ' + mmss(next) + ' · every ' + wave.interval + 's';
+        } else {
+          const s = soonestCycle(src.cycles, t);
+          next = s.next;
+          info = s.label + ' at ' + mmss(s.next);
+        }
+        const remaining = next - t;
+
+        if (next !== Infinity && remaining <= src.lead) {
+          notifShow(n);
+          setText(n.time, remaining + 's');
+          setText(n.info, info);
+        } else if (n.state === 1) {
+          // Countdown just passed zero: the event fired this second.
+          if (allowEvents) notifFire(n); else notifHide(n);
+        }
+      }
+    }
+
+    function hideAllNotifications() {
+      for (const id in notifs) notifHide(notifs[id]);
+    }
+
+    /* =====================================================================
+       UPCOMING STRIP
+       ===================================================================== */
+    const cards = {};
+    EVENTS.forEach(ev => {
+      const card = document.createElement('div');
+      card.className = 'event';
+      card.dataset.voice = ev.voice;
+      card.style.setProperty('--accent', ev.color);
+      card.style.setProperty('--glow', ev.color + '66');
+
+      // Artwork becomes a blurred backdrop; cards without art get a watermark letter.
+      const art = document.createElement('div');
+      if (ev.img) {
+        art.className = 'backdrop';
+        art.style.backgroundImage = 'url("' + ev.img + '")';
+        art.style.backgroundPosition = ev.imgPos || 'center';
+      } else {
+        art.className = 'glyph';
+        art.textContent = ev.glyph;
+      }
+
+      const name = document.createElement('div');
+      name.className = 'name';
+      name.textContent = ev.name;
+
+      const when = document.createElement('div');
+      when.className = 'when';
+
+      const note = document.createElement('div');
+      note.className = 'note';
+      note.textContent = ev.note;
+
+      card.append(art, name, when, note);
+      cards[ev.id] = { card, when, soon: false, up: false };
+      el.upcoming.appendChild(card);
+    });
+
+    let cardOrder = '';
+    const orderBuf = EVENTS.map(ev => ({ id: ev.id, key: 0 }));
+
+    function renderUpcoming(t, allowEvents, prevCounts, counts) {
+      for (let i = 0; i < EVENTS.length; i++) {
+        const ev = EVENTS[i], ui = cards[ev.id];
+        const next = nextTime(ev, t);
+        counts[ev.id] = occurrences(ev, t);
+
+        let text, soon = false, up = false;
+        if (next === null) { text = ev.upLabel || 'done'; up = true; }
+        else if (next - t <= COUNTDOWN_WINDOW) { text = (next - t) + 's'; soon = true; }
+        else text = mmss(next);
+
+        setText(ui.when, text);
+        if (ui.soon !== soon) { ui.soon = soon; ui.card.classList.toggle('soon', soon); }
+        if (ui.up !== up) { ui.up = up; ui.when.classList.toggle('up', up); }
+
+        orderBuf[i].id = ev.id;
+        orderBuf[i].key = next === null ? Infinity : next;
+        if (allowEvents && counts[ev.id] > (prevCounts[ev.id] || 0)) {
+          blink(ui.card);
+          logEvent(t, ev.name + (ev.every && counts[ev.id] > 1 ? ' respawned' : ''), ev.color);
+        }
+      }
+
+      // Soonest first; only touch the DOM when the order actually changes.
+      orderBuf.sort((a, b) => a.key - b.key);
+      let sig = '';
+      for (let i = 0; i < orderBuf.length; i++) sig += orderBuf[i].id + ',';
+      if (sig !== cardOrder) {
+        cardOrder = sig;
+        for (let i = 0; i < orderBuf.length; i++) el.upcoming.appendChild(cards[orderBuf[i].id].card);
+        requestThumbSync();
+      }
+    }
+
+    /* ---- Scroller: drag the row, drag the thumb, click the track, wheel ---- */
+    let thumbSyncQueued = false;
+
+    function syncThumb() {
+      thumbSyncQueued = false;
+      const row = el.upcoming;
+      const trackW = el.scroller.clientWidth;
+      const maxScroll = row.scrollWidth - row.clientWidth;
+      if (maxScroll <= 0) {
+        el.thumb.style.width = '100%';
+        el.thumb.style.transform = 'translateX(0)';
+        return;
+      }
+      const w = Math.max(40, trackW * row.clientWidth / row.scrollWidth);
+      const x = (row.scrollLeft / maxScroll) * (trackW - w);
+      el.thumb.style.width = w + 'px';
+      el.thumb.style.transform = 'translateX(' + x + 'px)';
+    }
+
+    function requestThumbSync() {
+      if (!thumbSyncQueued) { thumbSyncQueued = true; requestAnimationFrame(syncThumb); }
+    }
+
+    el.upcoming.addEventListener('scroll', requestThumbSync, { passive: true });
+    new ResizeObserver(requestThumbSync).observe(el.upcoming);
+
+    // Drag the row itself with the left mouse button.
+    (function () {
+      let startX = 0, startScroll = 0, dragging = false;
+      const row = el.upcoming;
+      row.addEventListener('pointerdown', e => {
+        if (e.button !== 0) return;
+        dragging = true;
+        startX = e.clientX;
+        startScroll = row.scrollLeft;
+        row.setPointerCapture(e.pointerId);
+        row.classList.add('dragging');
+      });
+      row.addEventListener('pointermove', e => {
+        if (dragging) row.scrollLeft = startScroll - (e.clientX - startX);
+      });
+      const end = () => { dragging = false; row.classList.remove('dragging'); };
+      row.addEventListener('pointerup', end);
+      row.addEventListener('pointercancel', end);
+      row.addEventListener('wheel', e => {
+        if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { row.scrollLeft += e.deltaY; e.preventDefault(); }
+      }, { passive: false });
+    })();
+
+    // Drag the thumb or click the track.
+    (function () {
+      let startX = 0, startScroll = 0, dragging = false;
+      const row = el.upcoming, track = el.scroller, thumb = el.thumb;
+      const ratio = () => (row.scrollWidth - row.clientWidth) / Math.max(1, track.clientWidth - thumb.offsetWidth);
+
+      thumb.addEventListener('pointerdown', e => {
+        if (e.button !== 0) return;
+        e.stopPropagation();
+        dragging = true;
+        startX = e.clientX;
+        startScroll = row.scrollLeft;
+        thumb.setPointerCapture(e.pointerId);
+        track.classList.add('dragging');
+      });
+      thumb.addEventListener('pointermove', e => {
+        if (dragging) row.scrollLeft = startScroll + (e.clientX - startX) * ratio();
+      });
+      const end = () => { dragging = false; track.classList.remove('dragging'); };
+      thumb.addEventListener('pointerup', end);
+      thumb.addEventListener('pointercancel', end);
+
+      track.addEventListener('pointerdown', e => {
+        if (e.button !== 0 || e.target === thumb) return;
+        const rect = track.getBoundingClientRect();
+        const frac = (e.clientX - rect.left) / rect.width;
+        row.scrollLeft = frac * row.scrollWidth - row.clientWidth / 2;
+      });
+    })();
+
+    /* =====================================================================
+       EVENT LOG  (newest line on top, capped)
+       ===================================================================== */
+    const LOG_MAX_LINES = 150;
+
+    function logEvent(t, text, color) {
+      const line = document.createElement('div');
+      line.className = 'line first';
+      if (color) line.style.setProperty('--accent', color);
+      const time = document.createElement('span');
+      time.className = 't';
+      time.textContent = mmss(t);
+      const msg = document.createElement('span');
+      msg.className = 'msg';
+      msg.textContent = text;
+      line.append(time, msg);
+
+      const old = el.log.firstChild;
+      if (old) old.classList.remove('first');
+      el.log.prepend(line);
+      while (el.log.childElementCount > LOG_MAX_LINES) el.log.lastChild.remove();
+    }
+
+    function clearLog() { el.log.textContent = ''; }
+
+    // Per-cycle spawn tracking for boxes and camps, so each group logs its own line.
+    const LOG_CYCLES = [
+      { cycles: BOX_CYCLES,   color: '#e8cc96', counts: new Array(BOX_CYCLES.length).fill(0) },
+      { cycles: CREEP_CYCLES, color: '#6ae79a', counts: new Array(CREEP_CYCLES.length).fill(0) }
+    ];
+
+    function logCycles(t, allowEvents) {
+      for (let g = 0; g < LOG_CYCLES.length; g++) {
+        const group = LOG_CYCLES[g];
+        for (let i = 0; i < group.cycles.length; i++) {
+          const c = group.cycles[i];
+          const n = occurrences(c, t);
+          if (allowEvents && n > group.counts[i]) logEvent(t, c.label + (n > 1 ? ' respawned' : ' spawned'), group.color);
+          group.counts[i] = n;
+        }
+      }
+    }
+
+    function resetCycleCounts() {
+      for (let g = 0; g < LOG_CYCLES.length; g++) LOG_CYCLES[g].counts.fill(0);
+    }
+
+    /* =====================================================================
+       PER-SECOND RENDER
+       ===================================================================== */
+    let lastSecond = -1;
+    let prev = { wave: 0, box: 0, creep: 0, events: {} };
+    let scratch = { wave: 0, box: 0, creep: 0, events: {} };
+
+    function renderSecond(t, allowEvents) {
+      const w = waveState(t);
+      setText(el.waveNext, (w.next - t) + 's');
+      setText(el.waveInfo, 'wave ' + w.count + ' · ' + (w.count * TROOPERS_PER_LANE) + ' troopers in lane');
+      setText(el.waveFoot, 'every ' + w.interval + 's · next at ' + mmss(w.next));
+
+      const box = renderCycles(t, BOX_CYCLES, BOX_FOOT, el.boxValue, el.boxSub, el.boxFoot);
+      const creep = renderCycles(t, CREEP_CYCLES, CREEP_FOOT, el.creepValue, el.creepSub, el.creepFoot);
+
+      // Fire order = voice priority: wave, boxes, creeps, then upcoming events.
+      if (allowEvents) {
+        if (w.count > prev.wave) {
+          blink(el.wavePanel);
+          logEvent(t, 'Wave ' + w.count + ' · ' + TROOPERS_PER_LANE + ' per lane', '#8ec2ff');
+        }
+        if (box > prev.box) blink(el.boxPanel);
+        if (creep > prev.creep) blink(el.creepPanel);
+      }
+
+      scratch.wave = w.count; scratch.box = box; scratch.creep = creep;
+      logCycles(t, allowEvents);
+      renderUpcoming(t, allowEvents, prev.events, scratch.events);
+      renderNotifications(t, allowEvents, w);
+
+      const tmp = prev; prev = scratch; scratch = tmp;   // swap buffers, no allocation per second
+    }
+
+    function render(allowEvents) {
+      const seconds = (elapsedMs() / 1000) | 0;
+      if (seconds === lastSecond) return;
+      lastSecond = seconds;
+      renderTimer(seconds);
+      renderSecond(seconds, allowEvents);
+    }
+
+    /* =====================================================================
+       MAIN LOOP  — only runs while the clock is running or the jog is held
+       ===================================================================== */
+    let loopId = null;
+    let lastFrame = 0;
+    let jogValue = 0;
+
+    function jogRate(v) {
+      const a = v < 0 ? -v : v;
+      if (a < JOG_DEADZONE) return 0;
+      const x = (a - JOG_DEADZONE) / (100 - JOG_DEADZONE);
+      return (v < 0 ? -1 : 1) * x * x * x * JOG_MAX_RATE;
+    }
+
+    function loop(now) {
+      loopId = null;
+      const dt = (now - lastFrame) / 1000;
+      lastFrame = now;
+
+      const rate = jogRate(jogValue);
+      if (rate !== 0) {
+        setElapsedMs(elapsedMs() + rate * dt * 1000);
+        setText(el.jogRate, (rate > 0 ? '+' : '−') + Math.round(rate < 0 ? -rate : rate) + ' s/s');
+      }
+
+      render(clock.running && rate === 0);
+      if (clock.running || rate !== 0) loopId = requestAnimationFrame(loop);
+    }
+
+    function ensureLoop() {
+      if (loopId === null) { lastFrame = performance.now(); loopId = requestAnimationFrame(loop); }
+    }
+
+    /* =====================================================================
+       CONTROLS
+       ===================================================================== */
+    function start() {
+      if (clock.offset === 0) logEvent(0, 'Match started · wave 1 out', '#c4cdc9');
+      clock.running = true;
+      clock.stamp = performance.now();
+      setText(el.startBtn, 'Pause');
+      ensureLoop();
+    }
+
+    function pause() {
+      clock.offset = elapsedMs();
+      clock.running = false;
+      setText(el.startBtn, 'Resume');
+      lastSecond = -1; render(false);
+    }
+
+    function reset() {
+      clock.running = false;
+      clock.offset = 0;
+      setText(el.startBtn, 'Start');
+      prev.wave = prev.box = prev.creep = 0;
+      for (const k in prev.events) prev.events[k] = 0;
+      hideAllNotifications();
+      resetCycleCounts();
+      clearLog();
+      lastSecond = -1; render(false);
+    }
+
+    el.startBtn.addEventListener('click', () => clock.running ? pause() : start());
+    el.resetBtn.addEventListener('click', reset);
+
+    el.voiceBtn.addEventListener('click', () => {
+      voice.on = !voice.on;
+      setText(el.voiceBtn, voice.on ? 'Voice on' : 'Voice off');
+      el.voiceBtn.classList.toggle('off', !voice.on);
+      if (voice.on) speak('Voice on');
+    });
+
+    // Jog bar springs back to centre on release.
+    function releaseJog() {
+      jogValue = 0;
+      el.jog.value = 0;
+      el.jogWrap.classList.remove('active');
+      setText(el.jogRate, 'scrub');
+    }
+
+    el.jog.addEventListener('input', () => {
+      jogValue = Number(el.jog.value);
+      const active = jogRate(jogValue) !== 0;
+      el.jogWrap.classList.toggle('active', active);
+      if (active) ensureLoop(); else setText(el.jogRate, 'scrub');
+    });
+    el.jog.addEventListener('change', releaseJog);
+    el.jog.addEventListener('keyup', releaseJog);
+    el.jog.addEventListener('blur', releaseJog);
+    window.addEventListener('pointerup', releaseJog);
+    window.addEventListener('pointercancel', releaseJog);
+
+    el.jumpForm.addEventListener('submit', e => {
+      e.preventDefault();
+      const secs = parseTime(el.jumpInput.value);
+      if (secs === null) {
+        el.jumpInput.classList.add('bad');
+        setTimeout(() => el.jumpInput.classList.remove('bad'), 600);
+        return;
+      }
+      setElapsedMs(secs * 1000);
+      lastSecond = -1; render(false);
+      el.jumpInput.value = '';
+      el.jumpInput.blur();
+    });
+
+    reset();
+    syncThumb();
+  </script>
+</body>
+</html>
