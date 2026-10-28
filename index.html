@@ -92,7 +92,8 @@
       --frame: rgba(106, 231, 154, 0.75);
       position: relative;
       contain: paint;
-      border: 1px solid var(--panel-border);
+      --border-rest: var(--panel-border);
+      border: 1px solid var(--border-rest);
       border-radius: var(--radius);
       background: var(--panel-bg);
       box-shadow: 0 10px 36px rgba(0, 0, 0, 0.5);
@@ -102,16 +103,29 @@
       overflow: hidden;
     }
 
-    /* Hand-drawn grunge frame from the kit, tinted with the panel accent */
-    .panel::before {
+    /* Hand-drawn frame: a plain rounded ring pushed through an SVG displacement filter
+       (defined at the top of <body>), so the line stays straight overall but gets an
+       uneven, inked edge. Same result in Chrome, Edge, Firefox and Safari. */
+    .panel::before,
+    .panel::after {
       content: "";
       position: absolute;
-      inset: 0;
       pointer-events: none;
-      background: var(--frame);
-      -webkit-mask-box-image: url("Assets/ui/border05.png") 46 / 22px round;
-      mask-border: url("Assets/ui/border05.png") 46 / 22px round;
+      border-radius: inherit;
       z-index: 1;
+      filter: url(#inked);
+    }
+
+    .panel::before {
+      inset: 4px;
+      border: 4px solid var(--frame);
+    }
+
+    .panel::after {
+      inset: 11px;
+      border: 1.5px solid var(--frame);
+      border-radius: calc(var(--radius) - 7px);
+      opacity: 0.45;
     }
 
     .panel > * { position: relative; z-index: 2; }
@@ -134,17 +148,7 @@
       color: var(--text-dim);
     }
 
-    .panel-title::after {
-      content: "";
-      display: block;
-      margin: 8px auto 0;
-      width: 60%;
-      height: 10px;
-      background: var(--accent);
-      opacity: 0.5;
-      -webkit-mask: url("Assets/ui/border03.png") center / 100% 100% no-repeat;
-      mask: url("Assets/ui/border03.png") center / 100% 100% no-repeat;
-    }
+    .panel-title::after { display: none; }   /* no underline under titles */
 
     /* ---------- Header ---------- */
     .header { padding: 0 32px; justify-content: space-between; gap: 24px; contain: none; overflow: visible; }  /* lets the settings menu drop below */
@@ -177,7 +181,9 @@
 
     .brand { display: flex; align-items: center; gap: 22px; height: 100%; flex: 0 0 auto; }
     .brand .mark { height: 64px; width: auto; }
-    .brand .wordmark { height: 46px; width: auto; }
+    .brand .wordmark { height: 42px; width: auto; display: block; }
+    .brand-text { display: flex; flex-direction: column; gap: 4px; }
+    .brand-cap { font-family: var(--font-ui); font-size: 0.68rem; letter-spacing: 0.42em; text-transform: uppercase; color: var(--text-dim); padding-left: 4px; }
 
     .timectl {
       display: flex;
@@ -307,14 +313,33 @@
     .start-btn:active { transform: scale(0.96); }
 
     /* ---------- Main grid ---------- */
-    .main { display: grid; grid-template-columns: 1.5fr 1fr 3.4fr; gap: var(--gap); min-height: 0; }
+    .main { display: grid; grid-template-columns: 1.1fr 1fr 4fr; gap: var(--gap); min-height: 0; }
     .middle { display: grid; grid-template-rows: 1fr; gap: var(--gap); min-height: 0; }
-    .right { display: grid; grid-template-rows: 1.4fr 1.1fr 1.2fr; gap: var(--gap); min-height: 0; }
+    .right { display: grid; grid-template-rows: auto minmax(0, 1.6fr) minmax(0, 1fr); gap: var(--gap); min-height: 0; }
 
     /* ---------- Timer ---------- */
+    /* Clock panel: [next objective] [clock] [current focus] */
+    /* Next objective and the clock sit on the left; the right side stays empty for the notification drawer. */
+    .clockpanel {
+      display: grid;
+      grid-template-columns: max-content max-content minmax(0, 1fr);
+      grid-template-areas:
+        "title title title"
+        "left  clock  .";
+      align-items: center;
+      column-gap: 28px;
+      row-gap: 4px;
+      padding: 12px 20px 12px;
+    }
+
+    .clockpanel .panel-title { grid-area: title; position: static; text-align: left; }
+    .side.next { grid-area: left; justify-self: start; width: max-content; max-width: 320px; }
+
+    .clockwrap { grid-area: clock; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+
     .timer {
       display: flex;
-      font-size: clamp(4rem, 10.5vw, 13rem);
+      font-size: clamp(2.6rem, 5vw, 6rem);
       line-height: 1;
       color: var(--cream);
       text-shadow: 0 0 18px var(--glow), 0 4px 0 rgba(0, 0, 0, 0.7);
@@ -323,13 +348,139 @@
     .timer span { display: inline-block; text-align: center; width: 0.66em; }
     .timer span.sep { width: 0.34em; color: var(--accent); }
 
+    .clock-labels {
+      display: flex;
+      width: 100%;
+      font-family: var(--font-ui);
+      font-size: 0.66rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    .clock-labels span { flex: 1; text-align: center; }
+
+    /* Side boxes inside the clock panel */
+    .side {
+      --accent: var(--ghost);
+      border: 1px solid var(--panel-border);
+      border-radius: 16px;
+      background: rgba(0, 0, 0, 0.28);
+      padding: 10px 14px 12px;
+      min-width: 0;
+    }
+
+    .side-title {
+      font-family: var(--font-ui);
+      font-size: 0.7rem;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+
+    .side-body { display: flex; align-items: center; gap: 12px; }
+
+    .side-icon { width: 74px; height: 74px; flex: 0 0 auto; border-radius: 14px; }
+
+    .side-icon {
+      background: rgba(6, 20, 19, 0.8) center / 85% no-repeat;
+      border: 2px solid var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-size: 1.8rem;
+      color: var(--accent);
+    }
+
+    .side-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+
+    .side-name {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--cream);
+      line-height: 1.05;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .side-name small { font-size: 0.7em; color: var(--text-dim); margin-left: 0.3em; }
+
+    .side-cap {
+      font-family: var(--font-ui);
+      font-size: 0.6rem;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    .side-val {
+      font-family: var(--font-display);
+      font-size: 2.3rem;
+      line-height: 1;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .side-sub {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-ui);
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ---------- Souls blocks, shared everywhere a value is shown ----------
+       .sb   = [icon amount] over a caption      .sbrow = blocks side by side with separators
+       .sc   = small inline chip [icon amount] for tight spots (trackers, log lines) */
+    .sb { display: inline-flex; flex-direction: column; gap: 2px; }
+    .sb .top { display: flex; align-items: center; gap: 8px; }
+    .sb img { width: 30px; height: 30px; object-fit: contain; flex: 0 0 auto; }
+
+    .sb b {
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      line-height: 1;
+      color: var(--cream);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .sb small {
+      font-family: var(--font-ui);
+      font-size: 0.66rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      white-space: nowrap;
+    }
+
+    .sbrow { display: flex; align-items: stretch; gap: 14px; }
+    .sbrow .sep { width: 2px; align-self: stretch; border-radius: 2px; background: rgba(255, 255, 255, 0.25); }
+
+    .sc { display: inline-flex; align-items: center; gap: 4px; vertical-align: middle; white-space: nowrap; }
+    .sc img { width: 16px; height: 16px; object-fit: contain; }
+    .sc b { font-family: var(--font-display); font-size: 1.05em; color: var(--cream); font-variant-numeric: tabular-nums; }
+    .line .sc img { width: 15px; height: 15px; }
+    .line .sc b { font-size: 1rem; }
+
     /* ---------- Counters ---------- */
-    .stats { display: grid; grid-template-columns: 1fr 1fr 1.25fr; gap: var(--gap); min-height: 0; }
+    .stats { display: grid; grid-template-columns: 1fr 1fr 1.1fr; gap: var(--gap); min-height: 0; }
 
     .stat { flex-direction: column; gap: 6px; padding: 60px 14px 14px; }
 
     .stat .value {
-      font-size: clamp(2.6rem, 4.8vw, 5.4rem);
+      font-size: clamp(2.4rem, 4vw, 4.6rem);
       line-height: 1;
       color: var(--cream);
       text-shadow: 0 0 14px var(--glow), 0 3px 0 rgba(0, 0, 0, 0.7);
@@ -349,12 +500,60 @@
 
     .stat .sub.faint { opacity: 0.65; font-size: 0.74rem; }
 
-    /* Panels with an icon beside the numbers (boxes, creeps, waves) */
-    .stat.with-img { flex-direction: row; gap: 18px; }
-    .stat.with-img .stat-img { height: 100%; max-height: 96px; width: auto; flex: 0 0 auto; }
-    .stat.with-img .numbers { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
-    .stat.with-img .numbers .sub { text-align: left; }
+    /* Counter panels (boxes, creeps, waves). Layout:
+         [ artwork ] [ title      ]
+         [ artwork ] [ souls row  ]
+         [ artwork ] [ big timer  ]
+         [ -------- rule -------- ]
+         [ status + respawn info  ]                                               */
+    .stat.with-img {
+      display: grid;
+      grid-template-columns: minmax(0, 38%) minmax(0, 1fr);
+      grid-template-rows: auto auto auto auto 1px auto auto;   /* every row natural height: nothing can overlap */
+      grid-template-areas:
+        "img  title"
+        "img  souls"
+        "img  value"
+        "img  cap"
+        "rule rule"
+        "info info"
+        "mini mini";
+      align-content: space-between;
+      column-gap: 18px;
+      row-gap: 6px;
+      padding: 18px 22px 16px 18px;
+      align-items: center;
+    }
+
+    .stat.with-img .panel-title { grid-area: title; position: static; text-align: left; align-self: end; }
+    /* The art box spans the three right-hand rows and has no height of its own, so the image
+       scales to whatever height the title + souls + timer stack needs, never the other way round. */
+    .stat.with-img .art { grid-area: img; position: relative; align-self: stretch; min-height: 0; min-width: 0; }
+    .stat.with-img .art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; object-position: center; }
+    .stat.with-img .sbrow { grid-area: souls; gap: 12px; flex-wrap: wrap; row-gap: 6px; }
+    .stat.with-img .value { grid-area: value; font-size: clamp(2.4rem, 3.4vw, 4rem); align-self: end; }
+    .stat.with-img .vcap { grid-area: cap; align-self: start; font-family: var(--font-ui); font-size: 0.66rem; letter-spacing: 0.26em; text-transform: uppercase; color: var(--text-dim); }
+
+    /* Mini timeline at the bottom of a counter panel */
+    .stat.with-img .mini { grid-area: mini; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+    .stat.with-img .info .sub { font-size: 0.92rem; }
+    .stat.with-img .info .sub.faint { font-size: 0.74rem; }
+    .mini-title { font-family: var(--font-ui); font-size: 0.6rem; letter-spacing: 0.26em; text-transform: uppercase; color: var(--text-dim); text-align: center; }
+    .mini-track { position: relative; display: flex; justify-content: space-between; }
+    .mini-track::before { content: ""; position: absolute; left: 10%; right: 10%; top: 5px; height: 2px; background: rgba(255, 255, 255, 0.14); }
+    .pt { position: relative; flex: 1 1 0; display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0; }
+    .pt i { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--accent); background: var(--panel-bg); box-sizing: border-box; }
+    .pt:first-child i { background: var(--accent); }
+    .pt b { font-family: var(--font-display); font-size: 0.95rem; line-height: 1; color: var(--cream); font-variant-numeric: tabular-nums; }
+    .pt small { font-family: var(--font-ui); font-size: 0.56rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); white-space: nowrap; }
     .stat.with-img .value small { font-size: 0.4em; letter-spacing: 0.12em; color: var(--text-dim); margin-left: 0.2em; }
+    .stat.with-img .rule { grid-area: rule; height: 1px; background: var(--accent); opacity: 0.4; }
+    .stat.with-img .info { grid-area: info; align-self: start; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+    .stat.with-img .info .sub { text-align: left; font-size: 1rem; color: var(--cream); letter-spacing: 0.1em; }
+    .stat.with-img .info .sub.faint { font-size: 0.8rem; color: var(--text-dim); opacity: 1; line-height: 1.35; }
+    .stat.with-img .sb img { width: 26px; height: 26px; }
+    .stat.with-img .sb b { font-size: 1.5rem; }
+    .stat.with-img .sb small { font-size: 0.6rem; letter-spacing: 0.12em; }
 
     /* ---------- Events panel (manual: midboss kills, custom timer) ---------- */
     .events {
@@ -365,7 +564,7 @@
       gap: 10px;
     }
 
-    .events .panel-title { position: static; }
+    .events .panel-title { position: static; text-align: left; }
 
     .ev-body {
       display: flex;
@@ -445,14 +644,18 @@
     }
 
     .evrow .ev-sub {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
       font-family: var(--font-ui);
       font-size: 0.72rem;
       letter-spacing: 0.1em;
       color: var(--text-dim);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
+
+    .evrow .ev-sub > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .evrow .ev-sub .sc { flex: 0 0 auto; }
 
     .evrow .ev-val {
       grid-area: val;
@@ -608,68 +811,53 @@
     .upcoming-row::-webkit-scrollbar { display: none; }
     .upcoming-row.dragging { cursor: grabbing; }
 
+    /* Upcoming card: [icon tile + name] / big time / souls / note */
     .event {
       --accent: var(--ghost);
       --glow: rgba(106, 231, 154, 0.45);
       contain: content;
       position: relative;
-      overflow: hidden;
-      flex: 0 0 210px;
+      flex: 0 0 182px;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: flex-end;
+      align-items: stretch;
+      justify-content: flex-start;
       gap: 6px;
-      padding: 14px 12px;
-      border-radius: 18px;
+      padding: 12px 12px 10px;
+      border-radius: 16px;
       background: rgba(6, 20, 19, 0.55);
       border: 1px solid var(--panel-border);
     }
 
-    /* Blurred artwork fills the card; a gradient keeps the text readable.
-       The blur is a static filter on an image, rasterised once, not a backdrop filter. */
-    .event .backdrop {
-      position: absolute;
-      inset: -8px;
-      background: center / cover no-repeat;
-      filter: blur(2px) brightness(0.7) saturate(1.1);
-      pointer-events: none;
-    }
+    .event .head { display: flex; align-items: center; gap: 10px; min-height: 48px; }
 
-    .event .backdrop::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(180deg, rgba(6, 20, 19, 0.05) 0%, rgba(6, 20, 19, 0.65) 60%, rgba(6, 20, 19, 0.9) 100%);
-    }
-
-    /* Cards without art get a big watermark letter instead */
-    .event .glyph {
-      position: absolute;
-      top: -6px;
-      right: 6px;
+    .event .icon {
+      flex: 0 0 auto;
+      width: 48px;
+      height: 48px;
+      border-radius: 10px;
+      border: 2px solid var(--accent);
+      background: rgba(6, 20, 19, 0.8) center / 84% no-repeat;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       font-family: var(--font-display);
-      font-size: 7rem;
-      line-height: 1;
+      font-size: 1.4rem;
       color: var(--accent);
-      opacity: 0.14;
-      pointer-events: none;
     }
-
-    .event .name, .event .when, .event .note { position: relative; }
 
     .event .name {
       font-family: var(--font-ui);
-      font-size: 0.78rem;
-      letter-spacing: 0.22em;
+      font-size: 0.72rem;
+      letter-spacing: 0.16em;
       text-transform: uppercase;
-      color: var(--text-dim);
-      text-align: center;
-      white-space: nowrap;
+      color: var(--cream);
+      line-height: 1.25;
+      min-width: 0;
     }
 
     .event .when {
-      font-size: 2.3rem;
+      font-size: 2rem;
       line-height: 1;
       color: var(--cream);
       text-shadow: 0 2px 0 rgba(0, 0, 0, 0.7);
@@ -680,12 +868,16 @@
 
     .event .note {
       font-family: var(--font-ui);
-      font-size: 0.7rem;
-      letter-spacing: 0.1em;
+      font-size: 0.68rem;
+      letter-spacing: 0.08em;
       color: var(--text-dim);
-      opacity: 0.65;
-      text-align: center;
+      line-height: 1.3;
     }
+
+    .event .sbrow { gap: 10px; }
+    .event .sb img { width: 20px; height: 20px; }
+    .event .sb b { font-size: 1.15rem; }
+    .event .sb small { font-size: 0.56rem; }
 
     .event.soon { border-color: var(--accent); }
     .event.soon .when { color: #fff; }
@@ -828,23 +1020,23 @@
     .log-list::-webkit-scrollbar { display: none; }
     .log-list.dragging { cursor: grabbing; }
 
+    /* Log line: [time] [icon] [title / detail] */
     .line {
       contain: content;
-      display: flex;
-      align-items: baseline;
-      gap: 12px;
-      padding: 5px 10px;
+      display: grid;
+      grid-template-columns: auto 34px minmax(0, 1fr);
+      align-items: center;
+      column-gap: 10px;
+      padding: 6px 10px;
       border-left: 3px solid var(--accent);
       border-radius: 0 8px 8px 0;
       background: rgba(255, 255, 255, 0.03);
       font-family: var(--font-ui);
-      font-size: 0.84rem;
       letter-spacing: 0.08em;
       line-height: 1.3;
     }
 
     .line .t {
-      flex: 0 0 auto;
       min-width: 5ch;
       font-family: var(--font-display);
       font-size: 1rem;
@@ -852,7 +1044,23 @@
       font-variant-numeric: tabular-nums;
     }
 
-    .line .msg { color: var(--cream); }
+    .line .li {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      border: 1px solid var(--panel-border);
+      background: rgba(6, 20, 19, 0.8) center / 82% no-repeat;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-size: 1rem;
+      color: var(--accent);
+    }
+
+    .line .txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+    .line .ttl { font-size: 0.86rem; color: var(--cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .line .msg { font-size: 0.74rem; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     .line.first {
       animation: lineIn 0.3s ease-out;
@@ -878,15 +1086,20 @@
 
     .notif {
       --accent: var(--ghost);
+      --glow: rgba(106, 231, 154, 0.55);
       contain: content;
+      will-change: transform, opacity;   /* own compositor layer: the page beneath is not repainted while it slides */
       transform: translateX(120%);
       opacity: 0;
       transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s;
-      background: rgba(8, 24, 22, 0.97);
+      background: rgba(8, 24, 22, 0.98);
       border: 3px solid var(--accent);
       border-radius: 28px;
       overflow: hidden;
-      box-shadow: 0 16px 50px rgba(0, 0, 0, 0.7);
+      box-shadow:
+        0 0 0 4px rgba(0, 0, 0, 0.75),            /* dark keyline */
+        0 0 34px var(--glow),                     /* accent glow */
+        0 0 70px 36px rgba(0, 0, 0, 0.7);         /* dark halo: darkens only the area around the card */
     }
 
     .notif.in { transform: none; opacity: 1; }
@@ -960,34 +1173,16 @@
       max-width: 100%;
     }
 
-    .nsouls .sv { display: flex; flex-direction: column; gap: 2px; }
-    .nsouls .sv .top { display: flex; align-items: center; gap: 10px; }
-    .nsouls .sv img { width: 46px; height: 46px; object-fit: contain; flex: 0 0 auto; }
-
-    .nsouls .sv b {
-      font-family: var(--font-display);
-      font-size: 2.1rem;
-      line-height: 1;
-      color: var(--cream);
-      font-variant-numeric: tabular-nums;
-      white-space: nowrap;
-    }
-
-    .nsouls .sv small {
-      font-family: var(--font-ui);
-      font-size: 0.74rem;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-      color: var(--text-dim);
-      white-space: nowrap;
-    }
-
-    .nsouls .sep { width: 2px; align-self: stretch; border-radius: 2px; background: rgba(255, 255, 255, 0.3); }
+    .nsouls .sb .top { gap: 10px; }
+    .nsouls .sb img { width: 46px; height: 46px; }
+    .nsouls .sb b { font-size: 2.1rem; }
+    .nsouls .sb small { font-size: 0.74rem; letter-spacing: 0.16em; }
+    .nsouls .sep { background: rgba(255, 255, 255, 0.3); }
 
     .drawer.compact .nsouls { gap: 12px; }
-    .drawer.compact .nsouls .sv img { width: 32px; height: 32px; }
-    .drawer.compact .nsouls .sv b { font-size: 1.5rem; }
-    .drawer.compact .nsouls .sv small { font-size: 0.66rem; }
+    .drawer.compact .nsouls .sb img { width: 32px; height: 32px; }
+    .drawer.compact .nsouls .sb b { font-size: 1.5rem; }
+    .drawer.compact .nsouls .sb small { font-size: 0.66rem; }
 
     .notif .body {
       display: flex;
@@ -1062,13 +1257,13 @@
 
     /* ---------- Red double-blink ---------- */
     @keyframes blinkPanel {
-      0%, 35%, 75%, 100% { background-color: var(--panel-bg); }
-      10%, 50% { background-color: rgba(232, 52, 42, 0.85); }
+      0%, 35%, 75%, 100% { background-color: var(--panel-bg); border-color: var(--border-rest); }
+      10%, 50% { background-color: rgba(232, 52, 42, 0.85); border-color: #ffb3ad; }
     }
 
     @keyframes blinkFrame {
-      0%, 35%, 75%, 100% { background-color: var(--frame); }
-      10%, 50% { background-color: #ffb3ad; }
+      0%, 35%, 75%, 100% { border-color: var(--frame); }
+      10%, 50% { border-color: #ffb3ad; }
     }
 
     @keyframes blinkEvent {
@@ -1089,6 +1284,14 @@
   </style>
 </head>
 <body>
+  <!-- Displacement filter that roughens the panel frames. Referenced from CSS as url(#inked). -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <filter id="inked" x="-6%" y="-6%" width="112%" height="112%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.075" numOctaves="4" seed="11" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="7" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </svg>
+
   <div class="bg"></div>
   <div class="grain"></div>
   <div class="vignette"></div>
@@ -1099,7 +1302,10 @@
     <header class="panel header">
       <div class="brand">
         <img class="mark" src="Assets/logos/ghostly-mark.svg" alt="">
-        <img class="wordmark" src="Assets/logos/classic-wordmark.svg" alt="Deadlock">
+        <div class="brand-text">
+          <img class="wordmark" src="Assets/logos/classic-wordmark.svg" alt="Deadlock">
+          <div class="brand-cap">Match companion</div>
+        </div>
       </div>
 
       <div class="timectl">
@@ -1155,7 +1361,7 @@
             <button class="fbtn" type="button" data-cat="box"   title="Only boxes"         style="background-image: url('Assets/img/box.png')"></button>
           </div>
           <details class="log-more" id="logMore">
-            <summary id="logMoreLabel">More &#9662;</summary>
+            <summary id="logMoreLabel">All &#9662;</summary>
             <div class="menu solo-menu">
               <button class="mitem" type="button" data-cat="">Show all</button>
               <button class="mitem" type="button" data-cat="bridge">Bridge buffs</button>
@@ -1185,7 +1391,7 @@
               <img class="ev-icon" src="Assets/img/midboss.png" alt="" style="object-position: 62% 32%">
               <div class="ev-text">
                 <div class="ev-name">Midboss</div>
-                <div class="ev-sub" id="mbSub">alive since start</div>
+                <div class="ev-sub"><span id="mbSub">alive since start</span><span class="sc" id="mbSouls"><img src="Assets/img/soul.png" alt=""><b id="mbSoulsB"></b></span></div>
               </div>
               <div class="ev-val up" id="mbVal">UP</div>
               <div class="ev-ctl"><button class="pill" id="mbBtn" type="button">Done</button></div>
@@ -1208,7 +1414,7 @@
               <div class="ev-icon">U</div>
               <div class="ev-text">
                 <div class="ev-name">Soul Urn</div>
-                <div class="ev-sub" id="urSub">first spawn at 10:00</div>
+                <div class="ev-sub"><span id="urSub">first spawn at 10:00</span><span class="sc" id="urSouls"><img src="Assets/img/soul.png" alt=""><b id="urSoulsB"></b></span></div>
               </div>
               <div class="ev-val" id="urVal">--</div>
               <div class="ev-ctl"><button class="pill" id="urBtn" type="button" disabled>Picked up</button></div>
@@ -1217,7 +1423,7 @@
               <img class="ev-icon" src="Assets/img/sinnner.png" alt="">
               <div class="ev-text">
                 <div class="ev-name">Sinner's Sacrifice</div>
-                <div class="ev-sub" id="snSub">first spawn at 08:00</div>
+                <div class="ev-sub"><span id="snSub">first spawn at 08:00</span><span class="sc" id="snSouls"><img src="Assets/img/soul.png" alt=""><b id="snSoulsB"></b></span></div>
               </div>
               <div class="ev-val" id="snVal">--</div>
               <div class="ev-ctl"><button class="pill" id="snBtn" type="button" disabled>Done</button></div>
@@ -1241,40 +1447,69 @@
       </section>
 
       <section class="right">
-        <div class="panel theme-grey">
+        <div class="panel theme-grey clockpanel">
           <div class="panel-title">Match time</div>
-          <div class="timer" id="timer"></div>
+
+          <div class="side next" id="noSide">
+            <div class="side-title">Next objective</div>
+            <div class="side-body">
+              <div class="side-icon" id="noIcon"></div>
+              <div class="side-text">
+                <div class="side-name" id="noName">--</div>
+                <div class="side-cap">spawns in</div>
+                <div class="side-val" id="noVal">--</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="clockwrap">
+            <div class="timer" id="timer"></div>
+            <div class="clock-labels"><span>Hours</span><span>Minutes</span><span>Seconds</span></div>
+          </div>
+
         </div>
 
         <div class="stats">
           <div class="panel stat with-img theme-beige" id="boxPanel" data-voice="Boxes" data-flash="box">
             <div class="panel-title">Boxes</div>
-            <img class="stat-img" src="Assets/img/box.png" alt="">
-            <div class="numbers">
-              <div class="value" id="boxValue">--</div>
+            <div class="art"><img src="Assets/img/box.png" alt=""></div>
+            <div class="sbrow" id="boxSouls"></div>
+            <div class="value" id="boxValue">--</div>
+            <div class="vcap" id="boxCap">until respawn</div>
+            <div class="rule"></div>
+            <div class="info">
               <div class="sub" id="boxSub"></div>
               <div class="sub faint" id="boxFoot"></div>
             </div>
+            <div class="mini"><div class="mini-title">Upcoming respawns</div><div class="mini-track" id="boxMini"></div></div>
           </div>
 
           <div class="panel stat with-img" id="creepPanel" data-voice="Creeps" data-flash="creep">
             <div class="panel-title">Creeps</div>
-            <img class="stat-img" src="Assets/img/creeper.png" alt="">
-            <div class="numbers">
-              <div class="value" id="creepValue">--</div>
+            <div class="art"><img src="Assets/img/creeper.png" alt=""></div>
+            <div class="sbrow" id="creepSouls"></div>
+            <div class="value" id="creepValue">--</div>
+            <div class="vcap" id="creepCap">until small camps</div>
+            <div class="rule"></div>
+            <div class="info">
               <div class="sub" id="creepSub"></div>
               <div class="sub faint" id="creepFoot"></div>
             </div>
+            <div class="mini"><div class="mini-title">Camp timeline</div><div class="mini-track" id="creepMini"></div></div>
           </div>
 
           <div class="panel stat with-img theme-blue" id="wavePanel" data-voice="Wave" data-flash="wave">
             <div class="panel-title">Trooper waves</div>
-            <img class="stat-img" src="Assets/img/trooper.png" alt="">
-            <div class="numbers">
-              <div class="value"><span id="waveNext">--</span><small>NEXT</small></div>
+            <div class="art"><img src="Assets/img/trooper.png" alt=""></div>
+            <div class="sbrow" id="waveSouls"></div>
+            <div class="value" id="waveNext">--</div>
+            <div class="vcap">next wave</div>
+            <div class="rule"></div>
+            <div class="info">
               <div class="sub" id="waveInfo"></div>
               <div class="sub faint" id="waveFoot"></div>
             </div>
+            <div class="mini"><div class="mini-title">Upcoming waves</div><div class="mini-track" id="waveMini"></div></div>
           </div>
         </div>
 
@@ -1307,10 +1542,10 @@
 
     // Repeating cycles: first spawn, then every (respawn + kill time).
     const BOX_CYCLES = [
-      { label: 'Map boxes',          first: 3 * 60,  every: 3 * 60 + KILL_TIME },
-      { label: 'Bell Tower · Plaza', first: 5 * 60,  every: 3 * 60 + KILL_TIME },
-      { label: 'Tunnels',            first: 5 * 60,  every: 5 * 60 + KILL_TIME },
-      { label: 'Times Square room',  first: 10 * 60, every: 3 * 60 + KILL_TIME }
+      { label: 'Map boxes',          short: 'Map',     first: 3 * 60,  every: 3 * 60 + KILL_TIME, sk: 'box' },
+      { label: 'Bell Tower · Plaza', short: 'Plaza',   first: 5 * 60,  every: 3 * 60 + KILL_TIME, sk: 'box' },
+      { label: 'Tunnels',            short: 'Tunnels', first: 5 * 60,  every: 5 * 60 + KILL_TIME, sk: 'box' },
+      { label: 'Times Square room',  short: 'Square',  first: 10 * 60, every: 3 * 60 + KILL_TIME, sk: 'box' }
     ];
     const BOX_FOOT = 'respawn 3:00 after break · tunnels 5:00 · +4s kill';
 
@@ -1330,9 +1565,9 @@
     const HAUNTS_PER_SMALL_CAMP = 3;
 
     const CREEP_CYCLES = [
-      { label: 'Small camps',  first: 2 * 60, every: 85 + KILL_TIME },
-      { label: 'Medium camps', first: 5 * 60, every: 290 + KILL_TIME },
-      { label: 'Large camps',  first: 8 * 60, every: 335 + KILL_TIME }
+      { label: 'Small camps',  short: 'Small',  first: 2 * 60, every: 85 + KILL_TIME,  sk: 'small' },
+      { label: 'Medium camps', short: 'Medium', first: 5 * 60, every: 290 + KILL_TIME, sk: 'medium' },
+      { label: 'Large camps',  short: 'Large',  first: 8 * 60, every: 335 + KILL_TIME, sk: 'large' }
     ];
     const CREEP_FOOT = 'respawn S 1:25 · M 4:50 · L 5:35 · +4s kill';
 
@@ -1340,16 +1575,16 @@
     const EVENTS = [
       { id: 'bridge',  name: 'Bridge buffs',    glyph: 'B', first: 5 * 60,  every: 5 * 60, note: 'all buffs from 10:00',             color: '#8ec2ff', voice: 'Bridge buffs', img: 'Assets/img/buff.png' },
       { id: 'urn',     name: 'Soul Urn',        glyph: 'U', first: 10 * 60, every: 5 * 60, note: 'held while carried',               color: '#e8cc96', voice: 'Urn',
-        upLabel: 'HELD', dynamic: t => urnNext(t) },
+        upLabel: 'HELD', dynamic: t => urnNext(t), sk: 'urn', soulsLabel: 'delivered' },
       { id: 'rift',    name: 'Unstable Rift',   glyph: 'R', first: 11 * 60, every: 7 * 60, note: 'give or take a minute',            color: '#c79bff', voice: 'Rift',
         dynamic: t => riftNext(t), count: t => riftCount(t) },
       { id: 'melee',   name: 'Melee troopers',  glyph: 'M', first: 5 * 60,  every: null,   note: 'join every wave',                  color: '#8ec2ff', voice: 'Melee troopers' },
       { id: 'waves25', name: 'Waves every 25s', glyph: 'W', first: 20 * 60, every: null,   note: 'down from 30s',                    color: '#8ec2ff', voice: 'Faster waves' },
       { id: 'waves20', name: 'Waves every 20s', glyph: 'W', first: 35 * 60, every: null,   note: 'down from 25s',                    color: '#8ec2ff', voice: 'Faster waves' },
       { id: 'midboss', name: 'Midboss',         glyph: '',  first: 0,       every: null,   note: 'respawn 7 / 6 / 5 min after kill', color: '#b6ff5c', voice: 'Midboss', img: 'Assets/img/midboss.png', imgPos: '62% 32%', upLabel: 'UP',
-        dynamic: () => midboss.respawnAt },   // set from the Trackers panel when the boss is killed
+        dynamic: () => midboss.respawnAt, sk: 'midboss', soulsLabel: 'bounty' },   // set from the Trackers panel when the boss is killed
       { id: 'sinner',  name: "Sinner's Sacrifice", glyph: 'S', first: 8 * 60, every: null, note: 'respawn 5:00 after broken', color: '#ff9f6e', voice: 'Sinners', img: 'Assets/img/sinnner.png', upLabel: 'UP',
-        dynamic: t => sinnerEndAt(t) }       // first spawn from the schedule, respawns from the Trackers panel
+        dynamic: t => sinnerEndAt(t), sk: 'sinner', soulsLabel: 'bounty' }       // first spawn from the schedule, respawns from the Trackers panel
     ];
 
     // Jog bar: match seconds per real second at full deflection, cubic curve.
@@ -1415,13 +1650,99 @@
       rjRow: $('rjRow'), rjVal: $('rjVal'), rjBtn: $('rjBtn'),
       rfRow: $('rfRow'), rfSub: $('rfSub'), rfVal: $('rfVal'), rfBtn: $('rfBtn'),
       urRow: $('urRow'), urSub: $('urSub'), urVal: $('urVal'), urBtn: $('urBtn'),
-      evList: $('evList'), evScroller: $('evScroller'), evThumb: $('evThumb')
+      evList: $('evList'), evScroller: $('evScroller'), evThumb: $('evThumb'),
+      boxSouls: $('boxSouls'), creepSouls: $('creepSouls'), waveSouls: $('waveSouls'),
+      boxCap: $('boxCap'), creepCap: $('creepCap'), boxMini: $('boxMini'), creepMini: $('creepMini'), waveMini: $('waveMini'),
+      noSide: $('noSide'), noIcon: $('noIcon'), noName: $('noName'), noVal: $('noVal'),
+      mbSoulsB: $('mbSoulsB'), snSoulsB: $('snSoulsB'), urSoulsB: $('urSoulsB')
     };
 
     // Cheap text setter: skips the DOM write when nothing changed.
     function setText(node, text) {
       if (node.__t !== text) { node.__t = text; node.textContent = text; }
     }
+
+    /* ---- Souls blocks: one builder used by panels, cards, notifications and the log ---- */
+    const SOUL_ICON = 'Assets/img/soul.png';
+
+    function makeSoulBlock(label) {
+      const box = document.createElement('div');
+      box.className = 'sb';
+      const top = document.createElement('div');
+      top.className = 'top';
+      const img = document.createElement('img');
+      img.src = SOUL_ICON;
+      img.alt = '';
+      const amount = document.createElement('b');
+      top.append(img, amount);
+      box.appendChild(top);
+      if (label) {
+        const cap = document.createElement('small');
+        cap.textContent = label;
+        box.appendChild(cap);
+      }
+      return { box, amount };
+    }
+
+    // Fills `container` with blocks separated by bars; returns the amount elements in order.
+    function makeSoulRow(container, labels) {
+      const amounts = [];
+      for (let i = 0; i < labels.length; i++) {
+        if (i) {
+          const sep = document.createElement('div');
+          sep.className = 'sep';
+          container.appendChild(sep);
+        }
+        const b = makeSoulBlock(labels[i]);
+        amounts.push(b.amount);
+        container.appendChild(b.box);
+      }
+      return amounts;
+    }
+
+    // Text with "§123" tokens becomes text + inline soul chips (used by log lines).
+    function fillSouls(node, text) {
+      node.textContent = '';
+      const parts = text.split('§');
+      node.appendChild(document.createTextNode(parts[0]));
+      for (let i = 1; i < parts.length; i++) {
+        const m = /^(\d+)([\s\S]*)$/.exec(parts[i]);
+        const chip = document.createElement('span');
+        chip.className = 'sc';
+        const img = document.createElement('img');
+        img.src = SOUL_ICON;
+        img.alt = 'souls';
+        const b = document.createElement('b');
+        b.textContent = m ? m[1] : '';
+        chip.append(img, b);
+        node.appendChild(chip);
+        node.appendChild(document.createTextNode(m ? m[2] : parts[i]));
+      }
+    }
+
+    // Mini timeline points: [dot] time / label. Built once, text updated per second.
+    function makeMini(container, n) {
+      const pts = [];
+      for (let i = 0; i < n; i++) {
+        const pt = document.createElement('div');
+        pt.className = 'pt';
+        const dot = document.createElement('i');
+        const b = document.createElement('b');
+        const small = document.createElement('small');
+        pt.append(dot, b, small);
+        container.appendChild(pt);
+        pts.push({ b, small });
+      }
+      return pts;
+    }
+
+    const boxMiniPts = makeMini(el.boxMini, BOX_CYCLES.length);
+    const creepMiniPts = makeMini(el.creepMini, CREEP_CYCLES.length);
+    const waveMiniPts = makeMini(el.waveMini, 5);
+
+    const boxSoulsAmt = makeSoulRow(el.boxSouls, ['box · 60%', 'tough box']);
+    const creepSoulsAmt = makeSoulRow(el.creepSouls, ['small', 'medium', 'large']);
+    const waveSoulsAmt = makeSoulRow(el.waveSouls, ['each', 'full wave']);
 
     /* =====================================================================
        CLOCK
@@ -1555,18 +1876,51 @@
       return soonestBuf;
     }
 
-    function renderCycles(t, cycles, foot, valueEl, subEl, footEl) {
+    const miniBuf = [];
+    function renderCycles(t, cycles, foot, valueEl, capEl, subEl, footEl, pts) {
       const s = soonestCycle(cycles, t);
       const remaining = s.next - t;
-      if (remaining <= COUNTDOWN_WINDOW) {
-        setText(valueEl, remaining + 's');
-        setText(subEl, 'until ' + s.label.toLowerCase());
-      } else {
-        setText(valueEl, '--');
-        setText(subEl, s.label.toLowerCase() + ' at ' + mmss(s.next));
-      }
+      setText(valueEl, remaining <= 60 ? remaining + 's' : mmss(remaining));
+      setText(capEl, 'until ' + s.label.toLowerCase());
+      setText(subEl, 'Next: ' + s.label + ' at ' + mmss(s.next));
       setText(footEl, foot);
+
+      // Mini timeline: every cycle's next spawn, soonest first.
+      miniBuf.length = 0;
+      for (let i = 0; i < cycles.length; i++) miniBuf.push({ next: nextTime(cycles[i], t), label: cycles[i].short || cycles[i].label });
+      miniBuf.sort((a, b) => a.next - b.next);
+      for (let i = 0; i < pts.length && i < miniBuf.length; i++) {
+        setText(pts[i].b, mmss(miniBuf[i].next));
+        setText(pts[i].small, miniBuf[i].label);
+      }
       return s.total;
+    }
+
+    // Next objective box: the soonest scheduled or tracked objective.
+    let noCurrent = null;
+    function renderNextObjective(t) {
+      let best = null, bestNext = Infinity;
+      for (let i = 0; i < EVENTS.length; i++) {
+        const ev = EVENTS[i];
+        if (ev.id === 'melee' || ev.id === 'waves25' || ev.id === 'waves20') continue;
+        const next = ev.dynamic ? ev.dynamic(t) : nextTime(ev, t);
+        if (next !== null && next < bestNext) { bestNext = next; best = ev; }
+      }
+      if (!best) { setText(el.noName, '--'); setText(el.noVal, '--'); return; }
+      setText(el.noName, best.name);
+      setText(el.noVal, mmss(bestNext - t));
+      if (noCurrent !== best) {
+        noCurrent = best;
+        el.noSide.style.setProperty('--accent', best.color);
+        if (best.img) {
+          el.noIcon.textContent = '';
+          el.noIcon.style.backgroundImage = 'url("' + best.img + '")';
+          el.noIcon.style.backgroundPosition = best.imgPos || 'center';
+        } else {
+          el.noIcon.style.backgroundImage = 'none';
+          el.noIcon.textContent = best.glyph;
+        }
+      }
     }
 
     /* =====================================================================
@@ -1624,6 +1978,7 @@
       const node = document.createElement('div');
       node.className = 'notif';
       node.style.setProperty('--accent', src.color);
+      node.style.setProperty('--glow', src.color + '99');   // accent at ~60% for the outer glow
 
       const head = document.createElement('div');
       head.className = 'head';
@@ -1647,33 +2002,11 @@
       // Souls row: [icon amount / caption] | [icon amount / caption], when the source has a bounty.
       let sPer = null, sTot = null;
       if (src.soulsLabels) {
-        const soulBlock = label => {
-          const box = document.createElement('div');
-          box.className = 'sv';
-          const top = document.createElement('div');
-          top.className = 'top';
-          const img = document.createElement('img');
-          img.src = 'Assets/img/soul.png';
-          img.alt = '';
-          const amount = document.createElement('b');
-          top.append(img, amount);
-          const caption = document.createElement('small');
-          caption.textContent = label;
-          box.append(top, caption);
-          return { box, amount };
-        };
         const row = document.createElement('div');
-        row.className = 'nsouls';
-        const per = soulBlock(src.soulsLabels[0]);
-        sPer = per.amount;
-        row.appendChild(per.box);
-        if (src.soulsLabels[1]) {
-          const sep = document.createElement('div');
-          sep.className = 'sep';
-          const tot = soulBlock(src.soulsLabels[1]);
-          sTot = tot.amount;
-          row.append(sep, tot.box);
-        }
+        row.className = 'sbrow nsouls';
+        const amounts = makeSoulRow(row, src.soulsLabels);
+        sPer = amounts[0];
+        sTot = amounts[1] || null;
         subrow.appendChild(row);
       }
 
@@ -1853,20 +2186,21 @@
       card.style.setProperty('--accent', ev.color);
       card.style.setProperty('--glow', ev.color + '66');
 
-      // Artwork becomes a blurred backdrop; cards without art get a watermark letter.
-      const art = document.createElement('div');
+      // Icon tile beside the name; artwork or a letter.
+      const head = document.createElement('div');
+      head.className = 'head';
+      const icon = document.createElement('div');
+      icon.className = 'icon';
       if (ev.img) {
-        art.className = 'backdrop';
-        art.style.backgroundImage = 'url("' + ev.img + '")';
-        art.style.backgroundPosition = ev.imgPos || 'center';
+        icon.style.backgroundImage = 'url("' + ev.img + '")';
+        icon.style.backgroundPosition = ev.imgPos || 'center';
       } else {
-        art.className = 'glyph';
-        art.textContent = ev.glyph;
+        icon.textContent = ev.glyph;
       }
-
       const name = document.createElement('div');
       name.className = 'name';
       name.textContent = ev.name;
+      head.append(icon, name);
 
       const when = document.createElement('div');
       when.className = 'when';
@@ -1875,8 +2209,16 @@
       note.className = 'note';
       note.textContent = ev.note;
 
-      card.append(art, name, when, note);
-      cards[ev.id] = { card, when, soon: false, up: false };
+      card.append(head, when);
+      let sAmt = null;
+      if (ev.sk) {                                   // bounty block for things that give souls
+        const row = document.createElement('div');
+        row.className = 'sbrow';
+        sAmt = makeSoulRow(row, [ev.soulsLabel || 'bounty'])[0];
+        card.appendChild(row);
+      }
+      card.appendChild(note);
+      cards[ev.id] = { card, when, sAmt, soon: false, up: false };
       el.upcoming.appendChild(card);
     });
 
@@ -1895,6 +2237,7 @@
         else text = mmss(next);
 
         setText(ui.when, text);
+        if (ui.sAmt) setText(ui.sAmt, souls(ev.sk, next === null ? t : next));
         if (ui.soon !== soon) { ui.soon = soon; ui.card.classList.toggle('soon', soon); }
         if (ui.up !== up) { ui.up = up; ui.when.classList.toggle('up', up); }
 
@@ -2030,13 +2373,13 @@
       cat, color,
       count: t => occurrences(c, t),
       time: k => c.first + (k - 1) * c.every,
-      text: k => (c.label || c.name) + (k > 1 ? ' respawned' : ' spawned')
+      text: k => (c.label || c.name) + (k > 1 ? ' respawned' : ' spawned') + (c.sk ? '\n§' + souls(c.sk, c.first + (k - 1) * c.every) + ' each' : '')
     });
 
     const LOG_SOURCES = [
-      { cat: 'match', color: '#c4cdc9', count: t => (t >= 0 ? 1 : 0), time: () => 0, text: () => 'Match started' },
+      { cat: 'match', color: '#c4cdc9', count: t => (t >= 0 ? 1 : 0), time: () => 0, text: () => 'Match started\nwave 1 out · midboss in the pit' },
       { cat: 'wave',  color: '#8ec2ff', count: t => waveState(t).count, time: waveTimeOf,
-        text: k => { const one = souls('trooper', waveTimeOf(k)); return 'Wave ' + k + ' · 1 = ' + one + ' · wave = ' + (one * TROOPERS_PER_LANE) + ' souls'; } }
+        text: k => { const one = souls('trooper', waveTimeOf(k)); return 'Trooper wave ' + k + '\n' + TROOPERS_PER_LANE + ' per lane · §' + one + ' each · §' + (one * TROOPERS_PER_LANE) + ' wave'; } }
     ];
     BOX_CYCLES.forEach(c => LOG_SOURCES.push(cycleSource(c, 'box', '#e8cc96')));
     CREEP_CYCLES.forEach(c => LOG_SOURCES.push(cycleSource(c, 'creep', '#6ae79a')));
@@ -2046,7 +2389,7 @@
         // Rift times come from the tracker's anchor once you have seen one spawn.
         LOG_SOURCES.push({
           cat, color: ev.color, count: riftCount, time: riftTime,
-          text: k => 'Unstable Rift' + (k <= rift.seen.length ? ' · seen' : ' · estimate')
+          text: k => 'Unstable Rift' + (k <= rift.seen.length ? '\nseen · side lane bridge' : '\nestimate · give or take a minute')
         });
         return;
       }
@@ -2055,24 +2398,59 @@
         count: t => occurrences(ev, t),
         time: k => ev.first + (k - 1) * (ev.every || 0),
         text: k => ev.name + (ev.every && k > 1 ? ' respawned' : (ev.id === 'midboss' ? ' up' : ''))
+                 + '\n' + (ev.sk ? '§' + souls(ev.sk, ev.first + (k - 1) * (ev.every || 0)) + ' · ' : '') + ev.note
       });
     });
 
     const logged = new Array(LOG_SOURCES.length).fill(0);   // occurrences already written per source
     let logDirty = false;
 
+    // Icon per log category
+    const LOG_ICONS = {
+      wave: { img: 'Assets/img/trooper.png' }, melee: { img: 'Assets/img/trooper.png' }, speed: { img: 'Assets/img/trooper.png' },
+      box: { img: 'Assets/img/box.png' }, creep: { img: 'Assets/img/creeper.png' }, bridge: { img: 'Assets/img/buff.png' },
+      midboss: { img: 'Assets/img/midboss.png', pos: '62% 32%' }, sinner: { img: 'Assets/img/sinnner.png' },
+      urn: { glyph: 'U' }, rift: { glyph: 'R' }, match: { glyph: '✦' }, timer: { glyph: 'S' }
+    };
+
+    // A line's text is "Title\nDetail"; the detail may carry §souls tokens.
     function makeLine(t, src, k, flash) {
       const line = document.createElement('div');
       line.className = flash ? 'line first' : 'line';
       line.dataset.cat = src.cat;
       line.style.setProperty('--accent', src.color);
+
       const time = document.createElement('span');
       time.className = 't';
       time.textContent = mmss(t);
-      const msg = document.createElement('span');
-      msg.className = 'msg';
-      msg.textContent = src.text(k);
-      line.append(time, msg);
+
+      const icon = document.createElement('div');
+      icon.className = 'li';
+      const ic = LOG_ICONS[src.cat];
+      if (ic && ic.img) {
+        icon.style.backgroundImage = 'url("' + ic.img + '")';
+        if (ic.pos) icon.style.backgroundPosition = ic.pos;
+      } else {
+        icon.textContent = ic ? ic.glyph : '';
+      }
+
+      const txt = document.createElement('div');
+      txt.className = 'txt';
+      const text = src.text(k);
+      const nl = text.indexOf('\n');
+      const ttl = document.createElement('span');
+      ttl.className = 'ttl';
+      ttl.textContent = nl === -1 ? text : text.slice(0, nl);
+      txt.appendChild(ttl);
+      if (nl !== -1) {
+        const msg = document.createElement('span');
+        msg.className = 'msg';
+        const detail = text.slice(nl + 1);
+        if (detail.indexOf('§') === -1) msg.textContent = detail; else fillSouls(msg, detail);
+        txt.appendChild(msg);
+      }
+
+      line.append(time, icon, txt);
       return line;
     }
 
@@ -2165,7 +2543,7 @@
       } else {
         setText(el.mbVal, mmss(midboss.respawnAt - t));
         el.mbVal.classList.remove('up');
-        setText(el.mbSub, 'back at ' + mmss(midboss.respawnAt) + ' · ' + souls('midboss', midboss.respawnAt) + ' souls');
+        setText(el.mbSub, 'back at ' + mmss(midboss.respawnAt));
         setText(el.mbBtn, 'Undo');
       }
       if (sinner.respawnAt === null && t < SINNER_FIRST) {
@@ -2183,7 +2561,7 @@
       } else {
         setText(el.snVal, mmss(sinner.respawnAt - t));
         el.snVal.classList.remove('up');
-        setText(el.snSub, 'back at ' + mmss(sinner.respawnAt) + ' · ' + souls('sinner', sinner.respawnAt) + ' souls');
+        setText(el.snSub, 'back at ' + mmss(sinner.respawnAt));
         setText(el.snBtn, 'Undo');
         el.snBtn.disabled = false;
       }
@@ -2199,7 +2577,7 @@
       const wait = midbossWait(midboss.deaths);
       midboss.respawnAt = t + wait;
       rejuv.available = true;                            // the Rejuvenator drops in the pit
-      midboss.entry = logManual(t, 'midboss', '#b6ff5c', 'Midboss killed · back at ' + mmss(midboss.respawnAt) + ' (' + (wait / 60) + ' min)');
+      midboss.entry = logManual(t, 'midboss', '#b6ff5c', 'Midboss killed\n§' + souls('midboss', t) + ' · back at ' + mmss(midboss.respawnAt) + ' (' + (wait / 60) + ' min)');
       renderManual(t);
     }
 
@@ -2221,11 +2599,11 @@
       if (watch.running) {
         watch.acc = watchElapsed(t);
         watch.running = false;
-        logManual(t, 'timer', '#c4cdc9', 'Stopwatch stopped at ' + mmss(watch.acc));
+        logManual(t, 'timer', '#c4cdc9', 'Stopwatch stopped\nat ' + mmss(watch.acc));
       } else {
         watch.startAt = t;
         watch.running = true;
-        logManual(t, 'timer', '#c4cdc9', 'Stopwatch started' + (watch.acc > 0 ? ' from ' + mmss(watch.acc) : ''));
+        logManual(t, 'timer', '#c4cdc9', 'Stopwatch started' + (watch.acc > 0 ? '\nfrom ' + mmss(watch.acc) : ''));
       }
       renderManual(t);
     }
@@ -2240,12 +2618,12 @@
     function manualTick(t, allowEvents) {
       if (midboss.respawnAt !== null && t >= midboss.respawnAt) {
         midboss.respawnAt = null;
-        logManual(t, 'midboss', '#b6ff5c', 'Midboss up');
+        logManual(t, 'midboss', '#b6ff5c', 'Midboss up\n§' + souls('midboss', t) + ' · back in the pit');
         if (allowEvents) blink(el.mbRow);
       }
       if (sinner.respawnAt !== null && t >= sinner.respawnAt) {
         sinner.respawnAt = null;
-        logManual(t, 'sinner', '#ff9f6e', "Sinner's Sacrifice respawned");
+        logManual(t, 'sinner', '#ff9f6e', "Sinner's Sacrifice respawned\n§" + souls('sinner', t));
         if (allowEvents) blink(el.snRow);
       }
 
@@ -2278,7 +2656,7 @@
       const t = nowSeconds();
       rejuv.available = false;
       rejuv.endAt = t + REJUV_DURATION;
-      logManual(t, 'midboss', '#b6ff5c', 'Rejuvenator picked up · buff until ' + mmss(rejuv.endAt));
+      logManual(t, 'midboss', '#b6ff5c', 'Rejuvenator picked up\nbuff until ' + mmss(rejuv.endAt));
       renderManual(t);
     }
 
@@ -2295,7 +2673,7 @@
         urn.held = false;
         urn.out = true;
         urn.lastSpawn = t;
-        if (allowEvents) logManual(t, 'urn', '#e8cc96', 'Soul Urn spawned (delayed)');
+        if (allowEvents) logManual(t, 'urn', '#e8cc96', 'Soul Urn spawned\n§' + urnValue() + ' · delayed by the carry');
       }
     }
 
@@ -2303,13 +2681,13 @@
       const t = nowSeconds();
       urn.out = false;
       urn.carriedAt = t;
-      logManual(t, 'urn', '#e8cc96', 'Urn picked up · ' + urnValue() + ' souls');
+      logManual(t, 'urn', '#e8cc96', 'Urn picked up\n§' + urnValue() + ' · deliver within 45s');
       renderManual(t);
     }
 
     function urnDelivered() {
       const t = nowSeconds();
-      logManual(t, 'urn', '#e8cc96', 'Urn delivered · ' + urnValue() + ' souls');
+      logManual(t, 'urn', '#e8cc96', 'Urn delivered\n§' + urnValue());
       urnRelease(t, true);
       renderManual(t);
     }
@@ -2374,23 +2752,28 @@
       if (urn.carriedAt !== null) {
         setText(el.urVal, mmss(urn.carriedAt + URN_CARRY_EXPIRE - t));
         el.urVal.classList.remove('up');
-        setText(el.urSub, 'carried · ' + urnValue() + ' souls' + (urn.held ? ' · next spawn held' : ''));
+        setText(el.urSub, 'carried' + (urn.held ? ' · next spawn held' : ''));
         setText(el.urBtn, 'Delivered');
         el.urBtn.disabled = false;
       } else if (urn.out) {
         setText(el.urVal, 'OUT');
         el.urVal.classList.add('up');
-        setText(el.urSub, 'on the map · ' + urnValue() + ' souls');
+        setText(el.urSub, 'on the map');
         setText(el.urBtn, 'Picked up');
         el.urBtn.disabled = false;
       } else {
         const next = nextTime(evById.urn, t);
         setText(el.urVal, mmss(next - t));
         el.urVal.classList.remove('up');
-        setText(el.urSub, (urn.count === 0 ? 'first spawn at ' : 'next at ') + mmss(next) + ' · ' + souls('urn', next) + ' souls');
+        setText(el.urSub, (urn.count === 0 ? 'first spawn at ' : 'next at ') + mmss(next));
         setText(el.urBtn, 'Picked up');
         el.urBtn.disabled = true;
       }
+
+      // Souls chips on the tracker rows: bounty at the relevant time
+      setText(el.mbSoulsB, souls('midboss', midboss.respawnAt === null ? t : midboss.respawnAt));
+      setText(el.snSoulsB, souls('sinner', sinner.respawnAt !== null ? sinner.respawnAt : (t < SINNER_FIRST ? SINNER_FIRST : t)));
+      setText(el.urSoulsB, (urn.carriedAt !== null || urn.out) ? urnValue() : souls('urn', nextTime(evById.urn, t)));
 
       // Unstable Rift
       const rn = riftNext(t);
@@ -2414,7 +2797,7 @@
       const t = nowSeconds();
       sinner.breaks++;
       sinner.respawnAt = t + SINNER_RESPAWN;
-      sinner.entry = logManual(t, 'sinner', '#ff9f6e', "Sinner's Sacrifice broken · back at " + mmss(sinner.respawnAt));
+      sinner.entry = logManual(t, 'sinner', '#ff9f6e', "Sinner's Sacrifice broken\n§" + souls('sinner', t) + ' · back at ' + mmss(sinner.respawnAt));
       renderManual(t);
     }
 
@@ -2465,7 +2848,7 @@
       el.logMore.querySelectorAll('.mitem').forEach(b => b.classList.toggle('on', b.dataset.cat === logSolo));
 
       const rare = MORE_NAMES[logSolo];
-      setText(el.logMoreLabel, (rare ? rare : 'More') + ' ▾');
+      setText(el.logMoreLabel, (rare ? rare : (logSolo ? MORE_NAMES[logSolo] || 'Filtered' : 'All')) + ' ▾');
       el.logMore.classList.toggle('on', !!rare);
       el.log.scrollTop = 0;
       logScroller.request();
@@ -2498,13 +2881,31 @@
 
     function renderSecond(t, allowEvents) {
       const w = waveState(t);
-      setText(el.waveNext, (w.next - t) + 's');
+      const waveIn = w.next - t;
+      setText(el.waveNext, waveIn + 's');
       const oneTrooper = souls('trooper', t);
-      setText(el.waveInfo, '1 = ' + oneTrooper + ' · wave = ' + (oneTrooper * TROOPERS_PER_LANE) + ' souls');
-      setText(el.waveFoot, 'wave ' + w.count + ' · every ' + w.interval + 's · next at ' + mmss(w.next));
+      setText(el.waveInfo, 'Wave ' + (w.count + 1) + ' at ' + mmss(w.next) + ' · every ' + w.interval + 's');
+      setText(el.waveFoot, TROOPERS_PER_LANE + ' per lane · 3 ranged + 1 medic, melee from 5:00');
+      setText(waveSoulsAmt[0], oneTrooper);
+      setText(waveSoulsAmt[1], oneTrooper * TROOPERS_PER_LANE);
 
-      const box = renderCycles(t, BOX_CYCLES, 'box ' + souls('box', t) + ' · tough ' + souls('tough', t) + ' souls · ' + BOX_FOOT, el.boxValue, el.boxSub, el.boxFoot);
-      const creep = renderCycles(t, CREEP_CYCLES, 'haunt S ' + souls('small', t) + ' · M ' + souls('medium', t) + ' · L ' + souls('large', t) + ' souls · ' + CREEP_FOOT, el.creepValue, el.creepSub, el.creepFoot);
+      // Upcoming waves mini timeline
+      let at = w.next;
+      for (let i = 0; i < waveMiniPts.length; i++) {
+        setText(waveMiniPts[i].b, mmss(at));
+        setText(waveMiniPts[i].small, '#' + (w.count + 1 + i));
+        at += intervalAt(at);
+      }
+
+      renderNextObjective(t);
+
+      const box = renderCycles(t, BOX_CYCLES, BOX_FOOT, el.boxValue, el.boxCap, el.boxSub, el.boxFoot, boxMiniPts);
+      const creep = renderCycles(t, CREEP_CYCLES, CREEP_FOOT, el.creepValue, el.creepCap, el.creepSub, el.creepFoot, creepMiniPts);
+      setText(boxSoulsAmt[0], souls('box', t));
+      setText(boxSoulsAmt[1], souls('tough', t));
+      setText(creepSoulsAmt[0], souls('small', t));
+      setText(creepSoulsAmt[1], souls('medium', t));
+      setText(creepSoulsAmt[2], souls('large', t));
 
       // Fire order = voice priority: wave, boxes, creeps, then upcoming events.
       if (allowEvents) {
